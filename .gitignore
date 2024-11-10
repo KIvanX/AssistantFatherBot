@@ -1,0 +1,4 @@
+.idea
+.env
+core/static/*
+core/test.py
