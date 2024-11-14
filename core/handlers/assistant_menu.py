@@ -15,20 +15,26 @@ import subprocess
 from core.utils import restart_assistant, check_assistant_status
 
 
-async def assistant_menu(call: types.CallbackQuery, callback_data: SelectAssistant, state: FSMContext):
-    assistant = await database.get_assistant(callback_data.id)
+async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext):
+    message: types.Message = data.message if isinstance(data, types.CallbackQuery) else data
 
+    state_data = await state.get_data()
+    assistant = await database.get_assistant(callback_data.id)
     assistant_status = '🔴 Остановить бота' if await check_assistant_status(assistant) else '🟢 Запустить бота'
 
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text=assistant_status, callback_data='change_assistant_status'))
     keyboard.row(types.InlineKeyboardButton(text='📚 База знаний', callback_data='knowledge_base'))
     keyboard.row(types.InlineKeyboardButton(text='✏️ Изменить', callback_data='edit_assistant'))
+    keyboard.row(types.InlineKeyboardButton(text='⚙️ Настройки', callback_data='assistant_settings'))
     keyboard.row(types.InlineKeyboardButton(text='🏚 Меню', callback_data='start'))
+    keyboard.adjust(1, 2, 1, 1)
 
     await state.update_data(assistant_id=callback_data.id)
-    await call.message.edit_text(f'Ассистент <b>{assistant["name"]}</b>\n\n'
-                                 f'Ссылка на чат с ботом: @{assistant["username"]}', reply_markup=keyboard.as_markup())
+    await bot.edit_message_text(f'Ассистент <b>{assistant["name"]}</b>\n\n'
+                                f'Ссылка на чат с ботом: @{assistant["username"]}', chat_id=message.chat.id,
+                                message_id=state_data.get('message_id', message.message_id),
+                                reply_markup=keyboard.as_markup())
 
 
 @dp.callback_query(F.data == 'edit_assistant')
@@ -176,3 +182,37 @@ async def change_assistant_status(call: types.CallbackQuery, state: FSMContext):
         await database.update_assistant(assistant['id'], {'pid': process.pid})
 
     await assistant_menu(call, SelectAssistant(id=assistant['id']), state)
+
+
+@dp.callback_query(F.data == 'assistant_settings')
+async def assistant_settings(call: types.CallbackQuery, state: FSMContext):
+    a_id = (await state.get_data())['assistant_id']
+
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(types.InlineKeyboardButton(text='🗑 Удалить ассистента', callback_data='delete_assistant_confirm'))
+    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data=SelectAssistant(id=a_id).pack()))
+
+    await call.message.edit_text('⚙️ Настройки', reply_markup=keyboard.as_markup())
+
+
+@dp.callback_query(F.data == 'delete_assistant_confirm')
+async def delete_assistant_confirm(call: types.CallbackQuery, state: FSMContext):
+    assistant = await database.get_assistant((await state.get_data())['assistant_id'])
+
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(types.InlineKeyboardButton(text='Да, уверен', callback_data='delete_assistant'))
+    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='assistant_settings'))
+
+    await call.message.edit_text(f'❗️ Вы уверены, что хотите удалить ассистента <b>{assistant["name"]}</b>?\n\n'
+                                 f'Это действие нельзя будет отменить',
+                                 reply_markup=keyboard.as_markup())
+
+
+@dp.callback_query(F.data == 'delete_assistant')
+async def delete_assistant(call: types.CallbackQuery, state: FSMContext):
+    await database.delete_assistant((await state.get_data())['assistant_id'])
+
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(text='🏚 Меню', callback_data='start'))
+
+    await call.message.edit_text(f'✅ Ассистент удален', reply_markup=keyboard.as_markup())

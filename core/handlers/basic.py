@@ -19,9 +19,11 @@ async def start(data, state: FSMContext):
     for assistant in await database.get_assistants(message.chat.id):
         keyboard.add(types.InlineKeyboardButton(text=assistant['name'],
                                                 callback_data=SelectAssistant(id=assistant['id']).pack()))
+    keyboard.adjust(2)
     keyboard.row(types.InlineKeyboardButton(text='➕ Создать ассистента', callback_data='create_assistant'), width=1)
     ans = message.answer if 'message' not in dict(data) else message.edit_text
-    await ans(f'<b>Добро пожаловать!</b>\n\nЗдесь Вы можете создать и администрировать своих ассистентов.',
+    await ans(f'<b>Добро пожаловать!</b>\n\nЗдесь Вы можете создать и администрировать своих ассистентов.\n\n'
+              f'<b>Ассистент</b> - это бот, который поможет Вам в общении с клиентами',
               reply_markup=keyboard.as_markup())
 
 
