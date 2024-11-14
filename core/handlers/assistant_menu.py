@@ -51,8 +51,8 @@ async def edit_assistant(data, state: FSMContext):
 
     assistant = await database.get_assistant(a_id)
     text = (f'<b>Имя: </b>{assistant["name"]}\n\n'
-            f'<b>Токен: </b>{assistant["token"]}\n\n'
-            f'<b>Инструкция: </b>{assistant["instruction"]}\n\n'
+            f'<b>Токен: </b><code>{assistant["token"]}</code>\n\n'
+            f'<b>Инструкция: </b>{assistant["instruction"] or "Не задана"}\n\n'
             f'✏️ Выберите, что хотите изменить')
     message_id = (await state.get_data()).get('message_id', message.message_id)
     await bot.edit_message_text(text, chat_id=message.chat.id, message_id=message_id,
@@ -65,13 +65,21 @@ async def edit_assistant_parameter(call: types.CallbackQuery, state: FSMContext)
     await state.update_data(parameter=call.data, message_id=call.message.message_id)
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
 
-    text = {'instruction': 'Инструкция: <code>' + assistant['instruction'] + '</code>',
+    text = {'instruction': 'Инструкция: ' + assistant['instruction'] if assistant['instruction'] else '',
             'token': 'Токен: <code>' + assistant['token'] + '</code>',
             'name': 'Имя ассистента: <code>' + assistant['name'] + '</code>'}[call.data]
+
+    about = {'instruction': '<b>Инструкция</b> - это начальный промпт, которому будет следовать '
+                            'ассистент при общении с клиентами. \nНапример: Ты - официант Николай, '
+                            'работаешь в ресторане "Гастрономия". Помогай клиентам сделать заказ.',
+             'token': '<b>Токен</b> - это ключ, который используется для связи с ботом. '
+                      'Его можно получить в @BotFather после создания бота.',
+             'name': '<b>Имя ассистента</b> - это название, которое будет отображаться в меню.'}[call.data]
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='edit_assistant'))
 
-    await call.message.edit_text(text + f'\n\n✏️ Введите новое значение', reply_markup=keyboard.as_markup())
+    await call.message.edit_text(text + '\n\n' + about + f'\n\n✏️ Введите новое значение',
+                                 reply_markup=keyboard.as_markup())
 
 
 @dp.message(F.text[0] != '/', EditAssistantStates.parameter)
@@ -95,7 +103,7 @@ async def knowledge_base(data, state: FSMContext):
     text = '📚 Загруженные документы\n\n'
     for doc in (await database.get_documents(a_id)):
         text += '├ <b>' + doc['file_name'] + '</b>\n'
-    text = text[:text.rfind('├')] + '└' + text[text.rfind('├') + 1:] if '├' in text else text
+    text = text[:text.rfind('├')] + '└' + text[text.rfind('├') + 1:] if '├' in text else text + 'Пусто'
 
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='➕ Добавить документ', callback_data='add_document'))
@@ -114,7 +122,10 @@ async def add_document(call: types.CallbackQuery, state: FSMContext):
 
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='knowledge_base'))
-    await call.message.edit_text('📚 Отправьте нужный документ', reply_markup=keyboard.as_markup())
+    await call.message.edit_text('📚 Отправьте нужный документ\n\n'
+                                 'Поддерживаются следующие расширения: doc, docx, txt, pdf, html, json, py и другие '
+                                 'форматы типы, которые широко используются для хранения текстовой информации.',
+                                 reply_markup=keyboard.as_markup())
 
 
 @dp.message(F.document, KnowledgeBaseAssistantStates.add)
