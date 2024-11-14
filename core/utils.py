@@ -28,7 +28,7 @@ async def check_token(message: types.Message):
 
 async def restart_assistant(assistant_id: int):
     assistant = await database.get_assistant(assistant_id)
-    if assistant['uid']:
+    if assistant['pid']:
         try:
             os.kill(assistant['pid'], signal.SIGTERM)
         except:
