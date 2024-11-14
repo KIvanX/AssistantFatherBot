@@ -33,7 +33,7 @@ async def restart_assistant(assistant_id: int):
             os.kill(assistant['pid'], signal.SIGTERM)
         except:
             pass
-        process = subprocess.Popen([".venv/bin/python", "core/assistant/main.py"])
+        process = subprocess.Popen(["venv/bin/python", "core/assistant/main.py"])
         await database.update_assistant(assistant['id'], {'pid': process.pid})
 
 
