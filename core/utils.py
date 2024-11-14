@@ -1,11 +1,9 @@
 import os
+import signal
 import subprocess
-
 from aiogram import types, Bot
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-
 from core import database
-from core.config import dp
 
 
 async def del_message(call: types.CallbackQuery):
@@ -29,11 +27,14 @@ async def check_token(message: types.Message):
 
 
 async def restart_assistant(assistant_id: int):
-    process = dp.assistants.get(assistant_id)
-    if process:
-        process.terminate()
-        process.wait()
-        dp.assistants[assistant_id] = subprocess.Popen([".venv/bin/python", "core/assistant/main.py"])
+    assistant = await database.get_assistant(assistant_id)
+    if assistant['uid']:
+        try:
+            os.kill(assistant['pid'], signal.SIGTERM)
+        except:
+            pass
+        process = subprocess.Popen([".venv/bin/python", "core/assistant/main.py"])
+        await database.update_assistant(assistant['id'], {'pid': process.pid})
 
 
 async def check_assistant_status(assistant: dict):

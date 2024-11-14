@@ -6,6 +6,7 @@ from aiogram.filters import Command
 from core import middleware, database
 from core.config import dp, bot
 from core.filters import SelectAssistant
+from core.handlers.admin import get_logs
 from core.handlers.assistant_menu import assistant_menu
 from core.handlers.basic import start
 from core.utils import del_message
@@ -17,6 +18,7 @@ async def main():
     dp.message.register(start, Command('start'))
     dp.callback_query.register(assistant_menu, SelectAssistant.filter())
     dp.callback_query.register(del_message, F.data == 'del')
+    dp.message.register(get_logs, Command('logs'))
 
     await bot.set_my_commands([
         types.BotCommand(command="start", description="Старт"),

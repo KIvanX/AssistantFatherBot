@@ -176,9 +176,7 @@ async def change_assistant_status(call: types.CallbackQuery, state: FSMContext):
     else:
         os.environ['ASSISTANT_ID'] = str(assistant['id'])
         dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", os.environ["ASSISTANT_ID"])
-        devnull = open(os.devnull, 'w')
-        process = subprocess.Popen(["nohup", ".venv/bin/python", "core/assistant/main.py"], preexec_fn=os.setsid,
-                                   stdout=devnull, stderr=devnull)
+        process = subprocess.Popen([".venv/bin/python", "core/assistant/main.py"])
         await database.update_assistant(assistant['id'], {'pid': process.pid})
 
     await assistant_menu(call, SelectAssistant(id=assistant['id']), state)

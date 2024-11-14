@@ -1,14 +1,11 @@
-from aiogram import types, F
+from aiogram import types
 from datetime import datetime
-from aiogram.filters import Command
 from aiogram.types import FSInputFile
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from core import config
-from core.config import dp, bot
+from core.config import bot
 
 
-@dp.message(Command('logs'))
 async def get_logs(message: types.Message):
     if message.chat.id == 1914011859:
         await message.delete()
