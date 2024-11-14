@@ -48,11 +48,10 @@ async def get_assistant(assistant_id: int) -> list:
         return dict(await connection.fetchrow('SELECT * FROM assistants WHERE id = $1', assistant_id))
 
 
-async def add_assistant(user_id: int, token: str, name: str, username: str) -> int:
+async def add_assistant(user_id: int, token: str):
     async with dp.db_pool.acquire() as connection:
-        return (await connection.fetch('INSERT INTO assistants(user_id, token, name, username) '
-                                       'VALUES ($1, $2, $3, $4) RETURNING id',
-                                       user_id, token, name, username))[0][0]
+        return (await connection.fetch('INSERT INTO assistants(user_id, token, name) VALUES ($1, $2, $3) RETURNING id',
+                                       user_id, token, 'Ассистент'))[0][0]
 
 
 async def update_assistant(assistant_id: int, data: dict):

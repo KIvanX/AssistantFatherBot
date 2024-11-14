@@ -1,20 +1,17 @@
 
 import os
-import aioredis
 import dotenv
 from aiogram import Dispatcher, Bot
 import logging
 from aiogram.client.default import DefaultBotProperties
-from aiogram.fsm.storage.redis import RedisStorage
 from aiogram.enums import ParseMode
-from openai import OpenAI
+from aiogram.fsm.storage.redis import RedisStorage
 
 dotenv.load_dotenv()
 
 bot = Bot(os.environ.get('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-redis = aioredis.from_url('redis://localhost:6379/5')
-dp = Dispatcher(storage=RedisStorage(redis))
-client = OpenAI(api_key=os.environ.get('OPEN_AI_KEY'))
+storage = RedisStorage.from_url('redis://localhost:6379/5')
+dp = Dispatcher(storage=storage)
 
 
 if os.environ.get('DEBUG', '').lower() == 'false':
