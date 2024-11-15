@@ -22,7 +22,6 @@ async def main():
 
     await bot.set_my_commands([
         types.BotCommand(command="start", description="Старт"),
-        types.BotCommand(command="help", description="Инструкция"),
     ])
 
     await dp.start_polling(bot)
