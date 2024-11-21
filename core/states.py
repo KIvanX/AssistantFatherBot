@@ -8,6 +8,7 @@ class CreateAssistantStates(StatesGroup):
 class EditAssistantStates(StatesGroup):
     edit = State()
     parameter = State()
+    edit_token = State()
 
 
 class KnowledgeBaseAssistantStates(StatesGroup):

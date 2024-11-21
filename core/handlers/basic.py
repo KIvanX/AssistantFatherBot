@@ -5,7 +5,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from core import database
 from core.config import dp
 from core.filters import SelectAssistant
-from core.handlers.assistant_menu import assistant_menu
+from core.handlers.menu import assistant_menu
 from core.states import CreateAssistantStates
 from core.utils import check_token
 
@@ -14,6 +14,9 @@ from core.utils import check_token
 async def start(data, state: FSMContext):
     message: types.Message = data.message if 'message' in dict(data) else data
     await state.clear()
+
+    if not await database.get_users(message.chat.id):
+        await database.add_user(message.chat.id)
 
     keyboard = InlineKeyboardBuilder()
     for assistant in await database.get_assistants(message.chat.id):

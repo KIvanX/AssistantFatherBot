@@ -19,9 +19,10 @@ async def add_user(user_id: int):
 async def get_users(user_id=None):
     async with dp.db_pool.acquire() as connection:
         if user_id is None:
-            return dict(await connection.fetchrow('SELECT * FROM users'))
+            return list(map(dict, list(await connection.fetch('SELECT * FROM users'))))
         else:
-            return list(map(dict, list(await connection.fetchrow('SELECT * FROM users WHERE id = $1', user_id))))
+            user = await connection.fetch('SELECT * FROM users WHERE id = $1', user_id)
+            return dict(user[0]) if user else {}
 
 
 async def update_user(user_id: int, data: dict):
@@ -48,11 +49,11 @@ async def get_assistant(assistant_id: int) -> list:
         return dict(await connection.fetchrow('SELECT * FROM assistants WHERE id = $1', assistant_id))
 
 
-async def add_assistant(user_id: int, token: str, name: str, username: str) -> int:
+async def add_assistant(user_id: int, token: str, name: str, username: str, model='gpt-4o-mini') -> int:
     async with dp.db_pool.acquire() as connection:
-        return (await connection.fetch('INSERT INTO assistants(user_id, token, name, username) '
-                                       'VALUES ($1, $2, $3, $4) RETURNING id',
-                                       user_id, token, name, username))[0][0]
+        return (await connection.fetch('INSERT INTO assistants(user_id, token, name, username, model) '
+                                       'VALUES ($1, $2, $3, $4, $5) RETURNING id',
+                                       user_id, token, name, username, model))[0][0]
 
 
 async def update_assistant(assistant_id: int, data: dict):

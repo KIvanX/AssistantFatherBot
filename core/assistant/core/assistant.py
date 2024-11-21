@@ -10,7 +10,7 @@ from core.config import dp
 async def init_assistant():
     vector_store = await dp.client.beta.vector_stores.create(name="Documents")
     for doc in await database.get_documents(dp.assistant['id']):
-        with open(f'core/static/{dp.assistant["id"]}/' + doc['file_name'], 'rb') as f:
+        with open(f'core/static/{dp.assistant["id"]}/documents/' + doc['file_name'], 'rb') as f:
             await dp.client.beta.vector_stores.file_batches.upload_and_poll(
                 vector_store_id=vector_store.id,
                 files=[(doc['file_name'], f)])
@@ -28,7 +28,7 @@ async def init_assistant():
     dp.assistant_id = assistant.id
 
 
-async def get_text(message: types.Message, state: FSMContext):
+async def get_message(message: types.Message, state: FSMContext):
     status = ['wait']
     asyncio.create_task(typing(message, status))
 
