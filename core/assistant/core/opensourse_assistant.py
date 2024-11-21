@@ -38,6 +38,9 @@ async def init_opensource_assistant():
             k += 1
 
     index.build(10)
+    path = f'core/static/{dp.assistant["id"]}'
+    if not os.path.exists(path):
+        os.makedirs(path)
     index.save(f'core/static/{dp.assistant["id"]}/embedding_index.ann')
 
 
