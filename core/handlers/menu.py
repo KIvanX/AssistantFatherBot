@@ -143,7 +143,7 @@ async def add_document_commit(message: types.Message, state: FSMContext):
     if not os.path.exists(path):
         os.makedirs(path)
     if not os.path.exists(path + '/documents'):
-        os.makedirs(path)
+        os.makedirs(path + '/documents')
 
     file_info = await bot.get_file(message.document.file_id)
     await bot.download_file(file_info.file_path, path + '/documents/' + message.document.file_name)
