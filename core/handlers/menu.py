@@ -32,7 +32,7 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
     statuses = {'init': '🟡 Запускается...', 'working': '🟢 Работает', 'stopped': '🔴 Остановлен'}
     text = (f'Ассистент <b>{assistant["name"]}</b>\n\n'
             f'Ссылка на чат с ботом: @{assistant["username"]}\n\n'
-            f'{statuses[assistant["status"]]}\n\n')
+            f'{statuses.get(assistant["status"], "🔴 Не запущен")}\n\n')
 
     if assistant['status'] == 'init':
         asyncio.create_task(wait_assistant_init(assistant['id'], (data, callback_data, state)))
