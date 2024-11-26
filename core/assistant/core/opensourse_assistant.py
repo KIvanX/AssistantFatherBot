@@ -19,8 +19,10 @@ from core.config import dp
 
 async def init_opensource_assistant():
     dp.redis_client = redis.Redis(host='localhost', port=6379, db=8)
+    # TODO локальная embedding модель
     dp.embed_model = OpenAIEmbeddings()
     dp.chat_model = ChatGroq(temperature=0, model_name=dp.assistant["model"], api_key=os.environ['GROQ_API_KEY'])
+    # TODO хранение истории сообщений в БД
     dp.store = {}
 
     index = AnnoyIndex(1536, 'angular')

@@ -47,11 +47,17 @@ async def edit_token_commit(message: types.Message, state: FSMContext):
     await state.set_state()
     state_data = await state.get_data()
 
-    await database.update_assistant(state_data['assistant_id'], {'token': message.text})
+    await database.update_assistant(state_data['assistant_id'], {'token': message.text, 'username': info.username})
+
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(text='🏚 Меню', callback_data='start'))
 
     await restart_working_assistant(state_data['assistant_id'])
     await message.delete()
-    await edit_token(message, state)
+    await bot.edit_message_text(f'✅ Токен успешно изменен. \n\n'
+                                f'Обновленная ссылка на чат: @{info.username}', chat_id=message.chat.id,
+                                message_id=state_data.get('message_id', message.message_id),
+                                reply_markup=keyboard.as_markup())
 
 
 @dp.callback_query(F.data == 'delete_assistant')

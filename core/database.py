@@ -41,7 +41,7 @@ async def update_user(user_id: int, data: dict):
 
 async def get_assistants(user_id: int) -> list:
     async with dp.db_pool.acquire() as connection:
-        return await connection.fetch('SELECT * FROM assistants WHERE user_id = $1', user_id)
+        return await connection.fetch('SELECT * FROM assistants WHERE user_id = $1 ORDER BY id', user_id)
 
 
 async def get_assistant(assistant_id: int) -> list:

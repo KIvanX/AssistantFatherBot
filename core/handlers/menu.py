@@ -113,7 +113,8 @@ async def knowledge_base(data, state: FSMContext):
 
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='➕ Добавить документ', callback_data='add_document'))
-    keyboard.row(types.InlineKeyboardButton(text='➖ Удаление документов', callback_data='delete_documents'))
+    if not text.endswith('Пусто'):
+        keyboard.row(types.InlineKeyboardButton(text='➖ Удаление документов', callback_data='delete_documents'))
     keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data=SelectAssistant(id=a_id).pack()))
 
     await bot.edit_message_text(text, chat_id=message.chat.id,
