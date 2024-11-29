@@ -4,6 +4,7 @@ import os
 import redis
 from aiogram import types
 from aiogram.enums import ChatAction
+from langchain_community.embeddings import FastEmbedEmbeddings
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.runnables import RunnableWithMessageHistory
 from langchain_groq import ChatGroq
@@ -19,13 +20,13 @@ from core.config import dp
 
 async def init_opensource_assistant():
     dp.redis_client = redis.Redis(host='localhost', port=6379, db=8)
-    # TODO локальная embedding модель
-    dp.embed_model = OpenAIEmbeddings()
+    # TODO бесплатная embedding модель
+    dp.embed_model = FastEmbedEmbeddings(model_name="BAAI/bge-base-en-v1.5")
     dp.chat_model = ChatGroq(temperature=0, model_name=dp.assistant["model"], api_key=os.environ['GROQ_API_KEY'])
     # TODO хранение истории сообщений в БД
     dp.store = {}
 
-    index = AnnoyIndex(1536, 'angular')
+    index = AnnoyIndex(768, 'angular')
     splitter = CharacterTextSplitter(separator=" ", chunk_size=2000, chunk_overlap=500)
 
     k = 0
@@ -84,7 +85,7 @@ async def get_message_opensource(message: types.Message):
 
 
 def search_similar_documents(message: types.Message):
-    index = AnnoyIndex(1536, 'angular')
+    index = AnnoyIndex(768, 'angular')
     index.load(f'core/static/{dp.assistant["id"]}/embedding_index.ann')
 
     history = get_session_history(message.chat.id).messages
