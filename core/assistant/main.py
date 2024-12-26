@@ -10,16 +10,11 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from openai import AsyncOpenAI
 
-if __name__ == "__main__":
-    from internal_core import database
-    from internal_core.openai_assistant import init_openai_assistant, get_openai_message
-    from internal_core.assistant import init_assistant, get_message
-    from internal_core.config import dp
-else:
-    from core.assistant.internal_core import database
-    from core.assistant.internal_core.openai_assistant import init_openai_assistant, get_openai_message
-    from core.assistant.internal_core.assistant import init_assistant, get_message
-    from core.assistant.internal_core.config import dp
+from core.assistant.internal_core import database
+from core.assistant.internal_core.openai_assistant import init_openai_assistant, get_openai_message
+from core.assistant.internal_core.assistant import init_assistant, get_message
+from core.assistant.internal_core.config import dp
+
 
 async def start_command(message: types.Message, state: FSMContext):
     if dp.assistant["own_search"] or 'gpt' not in dp.assistant["model"].lower():
