@@ -1,6 +1,6 @@
 import os
 import asyncpg
-from internal_core.config import dp
+from core.assistant.internal_core.config import dp
 
 
 async def get_db_pool():

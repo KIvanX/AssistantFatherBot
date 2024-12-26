@@ -10,9 +10,9 @@ from langchain_community.vectorstores import Chroma
 from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from internal_core import database as in_database
-from internal_core.custom_models import JinaEmbeddings
-from internal_core.config import dp as in_dp
+from core.assistant.internal_core import database as in_database
+from core.assistant.internal_core.custom_models import JinaEmbeddings
+from core.assistant.internal_core.config import dp as in_dp
 
 
 async def init_assistant(external_data=None):
