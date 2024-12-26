@@ -52,5 +52,5 @@ async def main():
     await dp.start_polling(dp.bot)
 
 
-if os.environ.get('ASSISTANT_ID'):
+if __name__ == "__main__" and os.environ.get('ASSISTANT_ID'):
     asyncio.run(main())
