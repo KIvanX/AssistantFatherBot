@@ -3,9 +3,6 @@ import logging
 import sys
 import os
 
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
-
 from aiogram import types, Bot, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
