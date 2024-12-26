@@ -1,4 +1,4 @@
 .idea
 .env
-core/static/*
+*.log
 core/test.py
