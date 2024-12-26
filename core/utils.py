@@ -4,7 +4,7 @@ import signal
 import subprocess
 
 import dotenv
-from aiogram import types, Bot, F
+from aiogram import types, Bot
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core import database
