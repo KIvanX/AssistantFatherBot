@@ -1,6 +1,6 @@
 import os
 import asyncpg
-from core.config import dp
+from internal_core.config import dp
 
 
 async def get_db_pool():
@@ -25,13 +25,6 @@ async def get_users(user_id=None):
 
 
 async def update_user(user_id: int, data: dict):
-    """
-       Функция update_user изменяет заданные в data параметры.
-
-       Аргументы:
-       user_id -- ID пользователя
-       data -- словарь, где ключи - названия столбцов, значения - новые значения
-    """
     async with dp.db_pool.acquire() as connection:
         for key in data:
             await connection.execute(f'UPDATE users SET {key} = $1 WHERE id = $2', data[key], user_id)
@@ -45,7 +38,9 @@ async def get_assistants(user_id: int) -> list:
 
 async def get_assistant(assistant_id: int) -> list:
     async with dp.db_pool.acquire() as connection:
-        return dict(await connection.fetchrow('SELECT * FROM assistants WHERE id = $1', assistant_id))
+        assistant = dict(await connection.fetchrow('SELECT * FROM assistants WHERE id = $1', assistant_id))
+        # assistant['is_free'] = 'gpt' not in assistant["model"].lower()
+        return assistant
 
 
 async def add_assistant(user_id: int, token: str):

@@ -1,6 +1,11 @@
 from aiogram.fsm.state import StatesGroup, State
 
 
+class BaseAssistantStates(StatesGroup):
+    in_panel = State()
+    auto_create = State()
+
+
 class CreateAssistantStates(StatesGroup):
     token = State()
 

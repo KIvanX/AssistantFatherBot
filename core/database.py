@@ -26,13 +26,6 @@ async def get_users(user_id=None):
 
 
 async def update_user(user_id: int, data: dict):
-    """
-       Функция update_user изменяет заданные в data параметры.
-
-       Аргументы:
-       user_id -- ID пользователя
-       data -- словарь, где ключи - названия столбцов, значения - новые значения
-    """
     async with dp.db_pool.acquire() as connection:
         for key in data:
             await connection.execute(f'UPDATE users SET {key} = $1 WHERE id = $2', data[key], user_id)
@@ -49,11 +42,12 @@ async def get_assistant(assistant_id: int) -> list:
         return dict(await connection.fetchrow('SELECT * FROM assistants WHERE id = $1', assistant_id))
 
 
-async def add_assistant(user_id: int, token: str, name: str, username: str, model='gpt-4o-mini') -> int:
+async def add_assistant(user_id: int, token: str, name: str, username: str,
+                        is_personal=False, model='gpt-4o-mini') -> int:
     async with dp.db_pool.acquire() as connection:
-        return (await connection.fetch('INSERT INTO assistants(user_id, token, name, username, model) '
-                                       'VALUES ($1, $2, $3, $4, $5) RETURNING id',
-                                       user_id, token, name, username, model))[0][0]
+        return (await connection.fetch('INSERT INTO assistants(user_id, is_personal, token, name, username, model) '
+                                       'VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+                                       user_id, is_personal, token, name, username, model))[0][0]
 
 
 async def update_assistant(assistant_id: int, data: dict):

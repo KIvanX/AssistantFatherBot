@@ -1,3 +1,6 @@
+import os
+import signal
+
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
@@ -6,19 +9,34 @@ from core import database
 from core.config import dp, bot
 from core.filters import SelectAssistant
 from core.states import EditAssistantStates
-from core.utils import restart_working_assistant, check_token
+from core.utils import restart_working_assistant, check_token, check_assistant_status
 
 
 @dp.callback_query(F.data == 'assistant_settings')
 async def assistant_settings(call: types.CallbackQuery, state: FSMContext):
-    a_id = (await state.get_data())['assistant_id']
+    assistant = await database.get_assistant((await state.get_data())['assistant_id'])
+    await state.set_state()
 
+    text = '⚙️ Настройки'
     keyboard = InlineKeyboardBuilder()
+    if 'gpt' in assistant['model'].lower():
+        system = '\n\nИспользуется RAG система ' + ('бота' if assistant['own_search'] else 'от OpenAI')
+        text += f'{system}\n\n<b>RAG</b> - система поиска релевантной информации в документах из "📚 База знаний"'
+        change_system = '🔄 Использовать RAG бота' if not assistant['own_search'] else '🔄 Использовать RAG от OpenAI'
+        keyboard.row(types.InlineKeyboardButton(text=change_system, callback_data='change_RAG_system'))
     keyboard.row(types.InlineKeyboardButton(text='🔑 Изменить токен', callback_data='edit_token'))
     keyboard.row(types.InlineKeyboardButton(text='🗑 Удалить ассистента', callback_data='delete_assistant'))
-    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data=SelectAssistant(id=a_id).pack()))
+    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data=SelectAssistant(id=assistant['id']).pack()))
 
-    await call.message.edit_text('⚙️ Настройки', reply_markup=keyboard.as_markup())
+    await call.message.edit_text(text, reply_markup=keyboard.as_markup())
+
+
+@dp.callback_query(F.data == 'change_RAG_system')
+async def change_RAG_system(call: types.CallbackQuery, state: FSMContext):
+    assistant = await database.get_assistant((await state.get_data())['assistant_id'])
+    await database.update_assistant(assistant['id'], {'own_search': not assistant['own_search']})
+    await restart_working_assistant(assistant['id'])
+    await assistant_settings(call, state)
 
 
 @dp.callback_query(F.data == 'edit_token')
@@ -75,6 +93,10 @@ async def delete_assistant_confirm(call: types.CallbackQuery, state: FSMContext)
 
 @dp.callback_query(F.data == 'delete_assistant_confirm')
 async def delete_assistant(call: types.CallbackQuery, state: FSMContext):
+    assistant = await database.get_assistant((await state.get_data())['assistant_id'])
+    if await check_assistant_status(assistant):
+        os.kill(assistant['pid'], signal.SIGTERM)
+
     await database.delete_assistant((await state.get_data())['assistant_id'])
 
     keyboard = InlineKeyboardBuilder()

@@ -9,32 +9,37 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from openai import AsyncOpenAI
 
-from core import database
-from core.assistant import init_assistant, get_message
-from core.opensourse_assistant import get_message_opensource, init_opensource_assistant
-from core.config import dp
+from internal_core import database
+from internal_core.openai_assistant import init_openai_assistant, get_openai_message
+from internal_core.assistant import init_assistant, get_message
+from internal_core.config import dp
 
 
-@dp.message(CommandStart())
 async def start_command(message: types.Message, state: FSMContext):
-    thread = await dp.client.beta.threads.create()
-    dp.store = {}
-    await state.update_data(thread_id=thread.id)
+    if dp.assistant["own_search"] or 'gpt' not in dp.assistant["model"].lower():
+        thread = (await state.get_data()).get('thread', {})
+        thread[str(message.chat.id)] = []
+        await state.update_data(thread=thread)
+    else:
+        thread = await dp.client.beta.threads.create()
+        await state.update_data(thread_id=thread.id)
     await message.answer(dp.assistant['start_text'])
 
 
 async def main():
     dp.db_pool = await database.get_db_pool()
     dp.assistant = await database.get_assistant(int(os.environ.get('ASSISTANT_ID')))
+    dp.message.register(start_command, CommandStart())
     dp.bot = Bot(dp.assistant['token'], default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    dp.client = AsyncOpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
 
-    if 'gpt' in dp.assistant["model"]:
+    if dp.assistant["own_search"] or 'gpt' not in dp.assistant["model"].lower():
         dp.message.register(get_message, F.text[0] != '/')
-        await init_assistant()
+        dp.chat_model, dp.vector_db = await init_assistant()
     else:
-        dp.message.register(get_message_opensource, F.text[0] != '/')
-        await init_opensource_assistant()
+        dp.client = AsyncOpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+        dp.message.register(get_openai_message, F.text[0] != '/')
+        await init_openai_assistant()
+
     logging.warning(f'Assistant {dp.assistant["id"]} is ready to work!')
     await database.update_assistant(dp.assistant['id'], {'status': 'working'})
     await dp.start_polling(dp.bot)

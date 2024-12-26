@@ -4,9 +4,12 @@ import signal
 import subprocess
 
 import dotenv
-from aiogram import types, Bot
+from aiogram import types, Bot, F
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+
 from core import database
+from core.config import dp
+from internal_core.assistant import init_assistant
 
 
 async def del_message(call: types.CallbackQuery):
@@ -33,8 +36,7 @@ async def start_assistant(assistant_id: int):
     assistant = await database.get_assistant(assistant_id)
 
     logging.warning(f'Start assistant {assistant_id}')
-    os.environ['ASSISTANT_ID'] = str(assistant['id'])
-    dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", os.environ["ASSISTANT_ID"])
+    dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", str(assistant['id']))
     process = subprocess.Popen(["venv/bin/python", "core/assistant/main.py"])
     await database.update_assistant(assistant['id'], {'pid': process.pid, 'status': 'init'})
 
@@ -60,3 +62,11 @@ async def check_assistant_status(assistant: dict):
             await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})
             return False
     return False
+
+
+async def init_personal_assistant(assistant: dict):
+    await database.update_assistant(assistant['id'], {'status': 'init'})
+    chat_model, vector_db = await init_assistant({'database': database, 'assistant': assistant})
+    dp.personal_chat_model[assistant['user_id']] = chat_model
+    dp.personal_vector_db[assistant['user_id']] = vector_db
+    await database.update_assistant(assistant['id'], {'status': 'working'})

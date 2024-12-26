@@ -9,20 +9,20 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from core import database
 from core.config import dp, bot
 from core.filters import DeleteDocument, SelectAssistant
-from core.states import EditAssistantStates, KnowledgeBaseAssistantStates
-
-from core.utils import restart_working_assistant, check_assistant_status, start_assistant
+from core.states import EditAssistantStates, KnowledgeBaseAssistantStates, BaseAssistantStates
+from core.utils import restart_working_assistant, start_assistant, init_personal_assistant
 
 
 async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext):
     message: types.Message = data.message if isinstance(data, types.CallbackQuery) else data
 
     state_data = await state.get_data()
+    await state.set_state(BaseAssistantStates.in_panel)
     assistant = await database.get_assistant(callback_data.id)
-    assistant_status = 'Остановить бота' if await check_assistant_status(assistant) else 'Запустить бота'
+    change_status = 'Запустить бота' if assistant['status'] == 'stopped' else 'Остановить бота'
 
     keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text=assistant_status, callback_data='change_assistant_status'))
+    keyboard.row(types.InlineKeyboardButton(text=change_status, callback_data='change_assistant_status'))
     keyboard.row(types.InlineKeyboardButton(text='📚 База знаний', callback_data='knowledge_base'))
     keyboard.row(types.InlineKeyboardButton(text='✏️ Изменить', callback_data='edit_assistant'))
     keyboard.row(types.InlineKeyboardButton(text='⚙️ Настройки', callback_data='assistant_settings'))
@@ -35,7 +35,7 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
             f'{statuses.get(assistant["status"], "🔴 Не запущен")}\n\n')
 
     if assistant['status'] == 'init':
-        asyncio.create_task(wait_assistant_init(assistant['id'], (data, callback_data, state)))
+        asyncio.create_task(wait_assistant_init(assistant['id'], state, (data, callback_data, state)))
     await state.update_data(assistant_id=callback_data.id)
     await bot.edit_message_text(text, chat_id=message.chat.id, reply_markup=keyboard.as_markup(),
                                 message_id=state_data.get('message_id', message.message_id))
@@ -104,6 +104,7 @@ async def edit_assistant_commit(message: types.Message, state: FSMContext):
 async def knowledge_base(data, state: FSMContext):
     message: types.Message = data.message if isinstance(data, types.CallbackQuery) else data
     state_data = await state.get_data()
+    await state.set_state()
     a_id = state_data['assistant_id']
 
     text = '📚 Загруженные документы\n\n'
@@ -140,14 +141,12 @@ async def add_document_commit(message: types.Message, state: FSMContext):
     state_data = await state.get_data()
     assistant = await database.get_assistant(state_data['assistant_id'])
 
-    path = f'core/static/{state_data["assistant_id"]}'
+    path = f'core/assistant/internal_core/static/{state_data["assistant_id"]}/documents'
     if not os.path.exists(path):
         os.makedirs(path)
-    if not os.path.exists(path + '/documents'):
-        os.makedirs(path + '/documents')
 
     file_info = await bot.get_file(message.document.file_id)
-    await bot.download_file(file_info.file_path, path + '/documents/' + message.document.file_name)
+    await bot.download_file(file_info.file_path, path + '/' + message.document.file_name)
     await database.add_document(assistant['id'], message.document.file_name)
 
     await restart_working_assistant(state_data['assistant_id'])
@@ -176,8 +175,9 @@ async def delete_documents_commit(call: types.CallbackQuery, state: FSMContext, 
 
     doc = await database.get_document(callback_data.id)
     await database.delete_document(doc['id'])
-    if os.path.isfile('core/static/' + str(doc['assistant_id']) + '/documents/' + doc['file_name']):
-        os.remove('core/static/' + str(doc['assistant_id']) + '/documents/' + doc['file_name'])
+    if os.path.isfile('core/assistant/internal_core/static/' + str(doc['assistant_id']) + '/documents/' +
+                      doc['file_name']):
+        os.remove('core/assistant/internal_core/static/' + str(doc['assistant_id']) + '/documents/' + doc['file_name'])
 
     await restart_working_assistant(doc['assistant_id'])
     await call.answer('✅ Документ удален')
@@ -194,7 +194,16 @@ async def change_assistant_status(call: types.CallbackQuery, state: FSMContext):
             pass
         await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})
     else:
-        await start_assistant(assistant['id'])
+        if not assistant['is_personal']:
+            await start_assistant(assistant['id'])
+        else:
+            if assistant['status'] == 'stopped':
+                for a in await database.get_assistants(call.message.chat.id):
+                    if a['is_personal'] and a['status'] != 'stopped':
+                        await database.update_assistant(a['id'], {'status': 'stopped'})
+                asyncio.create_task(init_personal_assistant(assistant))
+            else:
+                await database.update_assistant(assistant['id'], {'status': 'stopped'})
 
     await assistant_menu(call, SelectAssistant(id=assistant['id']), state)
 
@@ -203,7 +212,7 @@ async def change_assistant_status(call: types.CallbackQuery, state: FSMContext):
 async def assistant_model(call: types.CallbackQuery):
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='Opensource (Gemma, Llama)', callback_data='opensource_models'))
-    keyboard.row(types.InlineKeyboardButton(text='Коммерческие (OpenAI)', callback_data='commercial_models'))
+    keyboard.row(types.InlineKeyboardButton(text='Коммерческие (OpenAI, GigaChat)', callback_data='commercial_models'))
     keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='edit_assistant'))
 
     await call.message.edit_text('Выберите тип языковой модели', reply_markup=keyboard.as_markup())
@@ -230,7 +239,8 @@ async def commercial_models(call: types.CallbackQuery, state: FSMContext):
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
 
     keyboard = InlineKeyboardBuilder()
-    for model in ["gpt-4o", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo"]:
+    for model in ["gpt-4o", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
+                  "GigaChat", "GigaChat-Pro", "GigaChat-Max"]:
         modes_txt = '✅ ' + model if model == assistant['model'] else model
         keyboard.add(types.InlineKeyboardButton(text=modes_txt, callback_data=f'assistant_model_{model}'))
     keyboard.adjust(2)
@@ -245,18 +255,19 @@ async def assistant_models_commit(call: types.CallbackQuery, state: FSMContext):
     await database.update_assistant(assistant['id'], {'model': call.data[16:]})
     await call.answer(f'Выбрана модель {call.data[16:]}')
     await restart_working_assistant(assistant['id'])
-    if 'gpt' in call.data[16:]:
+    if 'gpt' in call.data.lower() or 'gigachat' in call.data.lower():
         await commercial_models(call, state)
     else:
         await opensource_models(call, state)
 
 
-async def wait_assistant_init(assistant_id, params):
+async def wait_assistant_init(assistant_id, state: FSMContext, params):
     assistant = await database.get_assistant(assistant_id)
     while assistant['status'] == 'init':
         await asyncio.sleep(2)
         assistant = await database.get_assistant(assistant_id)
     try:
-        await assistant_menu(*params)
+        if await state.get_state() == BaseAssistantStates.in_panel:
+            await assistant_menu(*params)
     except:
         pass

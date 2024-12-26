@@ -13,7 +13,6 @@ bot = Bot(os.environ.get('TOKEN'), default=DefaultBotProperties(parse_mode=Parse
 storage = RedisStorage.from_url('redis://localhost:6379/5')
 dp = Dispatcher(storage=storage)
 
-
 if os.environ.get('DEBUG', '').lower() == 'false':
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
