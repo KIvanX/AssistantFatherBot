@@ -15,7 +15,7 @@ if not DEBUG:
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
-    path = f"internal_core/static/{os.environ['ASSISTANT_ID']}/logs.log"
+    path = f"core/assistant/internal_core/static/{os.environ['ASSISTANT_ID']}/logs.log"
     logging.basicConfig(level=logging.WARNING, filename=path, filemode="a",
                         format=f"ASSISTANT {os.environ.get('ASSISTANT_ID')} %(asctime)s %(levelname)s "
                                f"%(message)s\n" + '_' * 100)
