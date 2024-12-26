@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core import database
 from core.config import dp
-from internal_core.assistant import init_assistant
+from core.assistant.internal_core.assistant import init_assistant
 
 
 async def del_message(call: types.CallbackQuery):

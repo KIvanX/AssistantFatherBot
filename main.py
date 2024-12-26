@@ -11,7 +11,7 @@ from core.handlers.menu import assistant_menu
 from core.handlers.basic import start
 from core.handlers.settings import assistant_settings
 from core.utils import del_message, check_assistant_status, start_assistant, init_personal_assistant
-from internal_core.assistant import get_message
+from core.assistant.internal_core.assistant import get_message
 
 
 async def text_handler(message: types.Message, state: FSMContext):
