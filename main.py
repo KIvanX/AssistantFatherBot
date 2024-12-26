@@ -39,7 +39,6 @@ async def main():
         types.BotCommand(command="start", description="Старт"),
     ])
 
-    dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", str(assistant['id']))
     for user in await database.get_users():
         for assistant in await database.get_assistants(user['id']):
             if assistant['pid']:
