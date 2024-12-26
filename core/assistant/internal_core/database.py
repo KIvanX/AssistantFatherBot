@@ -1,6 +1,9 @@
 import os
 import asyncpg
-from core.assistant.internal_core.config import dp
+if __name__ == "__main__":
+    from internal_core.config import dp
+else:
+    from core.assistant.internal_core.config import dp
 
 
 async def get_db_pool():
