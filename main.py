@@ -1,6 +1,4 @@
 import asyncio
-
-import dotenv
 from aiogram import types, F
 from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
@@ -41,7 +39,7 @@ async def main():
         types.BotCommand(command="start", description="Старт"),
     ])
 
-    dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", '')
+    dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", str(assistant['id']))
     for user in await database.get_users():
         for assistant in await database.get_assistants(user['id']):
             if assistant['pid']:
