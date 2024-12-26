@@ -3,6 +3,9 @@ import logging
 import sys
 import os
 
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(current_dir)
+
 from aiogram import types, Bot, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -14,9 +17,6 @@ from core.assistant.internal_core import database
 from core.assistant.internal_core.openai_assistant import init_openai_assistant, get_openai_message
 from core.assistant.internal_core.assistant import init_assistant, get_message
 from core.assistant.internal_core.config import dp
-
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(current_dir)
 
 
 async def start_command(message: types.Message, state: FSMContext):
