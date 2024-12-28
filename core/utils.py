@@ -38,7 +38,7 @@ async def start_assistant(assistant_id: int):
 
     logging.warning(f'Start assistant {assistant_id}')
     dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", str(assistant['id']))
-    process = subprocess.Popen(["venv/bin/python", "core/assistant/main.py"])
+    process = subprocess.Popen(["venv/bin/python", "-m", "core.assistant.main"])
     await database.update_assistant(assistant['id'], {'pid': process.pid, 'status': 'init'})
 
 

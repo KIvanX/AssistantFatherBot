@@ -1,7 +1,5 @@
 import logging
 import os
-
-import dotenv
 from aiogram import Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 

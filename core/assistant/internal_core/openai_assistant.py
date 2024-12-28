@@ -3,8 +3,8 @@ import asyncio
 from aiogram import types
 from aiogram.fsm.context import FSMContext
 from aiogram.enums.chat_action import ChatAction
-from core.assistant.internal_core import database
-from core.assistant.internal_core.config import dp
+from . import database
+from .config import dp
 
 
 async def init_openai_assistant():
