@@ -42,12 +42,13 @@ async def get_assistant(assistant_id: int) -> list:
         return dict(await connection.fetchrow('SELECT * FROM assistants WHERE id = $1', assistant_id))
 
 
-async def add_assistant(user_id: int, token: str, name: str, username: str,
-                        is_personal=False, model='gpt-4o-mini') -> int:
+async def add_assistant(user_id: int, is_personal: bool, token: str, name: str, start_text: str, model: str,
+                        instruction: str, username: str) -> int:
     async with dp.db_pool.acquire() as connection:
-        return (await connection.fetch('INSERT INTO assistants(user_id, is_personal, token, name, username, model) '
-                                       'VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
-                                       user_id, is_personal, token, name, username, model))[0][0]
+        return (await connection.fetch('INSERT INTO assistants(user_id, is_personal, token, name, start_text, model, '
+                                       'instruction, username) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
+                                       user_id, is_personal, token, name, start_text, model, instruction,
+                                       username))[0][0]
 
 
 async def update_assistant(assistant_id: int, data: dict):

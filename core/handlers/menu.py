@@ -32,7 +32,7 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
     statuses = {'init': '🟡 Запускается...', 'working': '🟢 Работает', 'stopped': '🔴 Остановлен'}
     text = (f'Ассистент <b>{assistant["name"]}</b>\n\n'
             f'Ссылка на чат с ботом: @{assistant["username"]}\n\n'
-            f'{statuses.get(assistant["status"], "🔴 Не запущен")}\n\n')
+            f'{statuses.get(assistant["status"], "?")}\n\n')
 
     if assistant['status'] == 'init':
         asyncio.create_task(wait_assistant_init(assistant['id'], state, (data, callback_data, state)))
@@ -44,22 +44,24 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
 @dp.callback_query(F.data == 'edit_assistant')
 async def edit_assistant(data, state: FSMContext):
     message: types.Message = data.message if isinstance(data, types.CallbackQuery) else data
-    a_id = (await state.get_data())['assistant_id']
+    assistant = await database.get_assistant((await state.get_data())['assistant_id'])
     await state.set_state(EditAssistantStates.edit)
 
     keyboard = InlineKeyboardBuilder()
     keyboard.add(types.InlineKeyboardButton(text='Имя', callback_data='name'))
-    keyboard.add(types.InlineKeyboardButton(text='Start сообщение', callback_data='start_text'))
+    if not assistant['is_personal']:
+        keyboard.add(types.InlineKeyboardButton(text='Start сообщение', callback_data='start_text'))
     keyboard.add(types.InlineKeyboardButton(text='Инструкция', callback_data='instruction'))
     keyboard.row(types.InlineKeyboardButton(text='Языковая модель', callback_data='assistant_model_type'))
-    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data=SelectAssistant(id=a_id).pack()))
+    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data=SelectAssistant(id=assistant['id']).pack()))
 
-    assistant = await database.get_assistant(a_id)
     text = (f'<b>Имя: </b>{assistant["name"]}\n\n'
             f'<b>Start сообщение: </b><code>{assistant["start_text"]}</code>\n\n'
             f'<b>Инструкция: </b>{assistant["instruction"] or "Не задана"}\n\n'
             f'<b>Языковая модель: </b>{assistant["model"]}\n\n'
             f'✏️ Выберите, что хотите изменить')
+    if assistant['is_personal']:
+        text = text.replace(f'<b>Start сообщение: </b><code>{assistant["start_text"]}</code>\n\n', '')
     message_id = (await state.get_data()).get('message_id', message.message_id)
     await bot.edit_message_text(text, chat_id=message.chat.id, message_id=message_id,
                                 reply_markup=keyboard.as_markup())

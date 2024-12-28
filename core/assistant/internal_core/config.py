@@ -6,7 +6,6 @@ from aiogram import Dispatcher
 from aiogram.fsm.storage.redis import RedisStorage
 
 
-dotenv.load_dotenv()
 DEBUG = os.environ.get('DEBUG', '').lower() != 'false'
 storage = RedisStorage.from_url('redis://localhost:6379/5')
 dp = Dispatcher(storage=storage)

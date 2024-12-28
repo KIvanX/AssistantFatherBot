@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import signal
@@ -51,6 +52,8 @@ async def restart_working_assistant(assistant_id: int):
             return 0
 
         await start_assistant(assistant_id)
+    elif assistant['is_personal']:
+        asyncio.create_task(init_personal_assistant(assistant))
 
 
 async def check_assistant_status(assistant: dict):

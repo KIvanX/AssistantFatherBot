@@ -3,6 +3,7 @@ import logging
 import sys
 import os
 
+import dotenv
 from aiogram import types, Bot, F
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
@@ -10,16 +11,16 @@ from aiogram.filters import CommandStart
 from aiogram.fsm.context import FSMContext
 from openai import AsyncOpenAI
 
-if __name__ == "__main__":
-    from internal_core import database
-    from internal_core.openai_assistant import init_openai_assistant, get_openai_message
-    from internal_core.assistant import init_assistant, get_message
-    from internal_core.config import dp
-else:
-    from core.assistant.internal_core import database
-    from core.assistant.internal_core.openai_assistant import init_openai_assistant, get_openai_message
-    from core.assistant.internal_core.assistant import init_assistant, get_message
-    from core.assistant.internal_core.config import dp
+# if __name__ == "__main__":
+#     from internal_core import database
+#     from internal_core.openai_assistant import init_openai_assistant, get_openai_message
+#     from internal_core.assistant import init_assistant, get_message
+#     from internal_core.config import dp
+# else:
+from core.assistant.internal_core import database
+from core.assistant.internal_core.openai_assistant import init_openai_assistant, get_openai_message
+from core.assistant.internal_core.assistant import init_assistant, get_message
+from core.assistant.internal_core.config import dp
 
 
 async def start_command(message: types.Message, state: FSMContext):
@@ -34,6 +35,8 @@ async def start_command(message: types.Message, state: FSMContext):
 
 
 async def main():
+    dotenv.load_dotenv()
+
     dp.db_pool = await database.get_db_pool()
     dp.assistant = await database.get_assistant(int(os.environ.get('ASSISTANT_ID')))
     dp.message.register(start_command, CommandStart())
@@ -52,5 +55,5 @@ async def main():
     await dp.start_polling(dp.bot)
 
 
-if __name__ == "__main__" and os.environ.get('ASSISTANT_ID'):
+if __name__ == "__main__":
     asyncio.run(main())

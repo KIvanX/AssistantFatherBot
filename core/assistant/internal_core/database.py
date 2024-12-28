@@ -1,9 +1,6 @@
 import os
 import asyncpg
-if __name__ == "__main__":
-    from internal_core.config import dp
-else:
-    from core.assistant.internal_core.config import dp
+from core.assistant.internal_core.config import dp
 
 
 async def get_db_pool():
@@ -42,7 +39,6 @@ async def get_assistants(user_id: int) -> list:
 async def get_assistant(assistant_id: int) -> list:
     async with dp.db_pool.acquire() as connection:
         assistant = dict(await connection.fetchrow('SELECT * FROM assistants WHERE id = $1', assistant_id))
-        # assistant['is_free'] = 'gpt' not in assistant["model"].lower()
         return assistant
 
 
