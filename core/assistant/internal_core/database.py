@@ -19,9 +19,10 @@ async def add_user(user_id: int):
 async def get_users(user_id=None):
     async with dp.db_pool.acquire() as connection:
         if user_id is None:
-            return dict(await connection.fetchrow('SELECT * FROM users'))
+            return list(map(dict, list(await connection.fetch('SELECT * FROM users'))))
         else:
-            return list(map(dict, list(await connection.fetchrow('SELECT * FROM users WHERE id = $1', user_id))))
+            user = await connection.fetch('SELECT * FROM users WHERE id = $1', user_id)
+            return dict(user[0]) if user else {}
 
 
 async def update_user(user_id: int, data: dict):

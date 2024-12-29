@@ -11,6 +11,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from core import database
 from core.config import dp
 from core.assistant.internal_core.assistant import init_assistant
+from core.assistant.internal_core.openai_assistant import init_openai_assistant
 
 
 async def del_message(call: types.CallbackQuery):
@@ -69,7 +70,11 @@ async def check_assistant_status(assistant: dict):
 
 async def init_personal_assistant(assistant: dict):
     await database.update_assistant(assistant['id'], {'status': 'init'})
-    chat_model, vector_db = await init_assistant({'database': database, 'assistant': assistant})
-    dp.personal_chat_model[assistant['user_id']] = chat_model
-    dp.personal_vector_db[assistant['user_id']] = vector_db
+    if assistant['own_search'] or 'gpt' not in assistant['model'].lower():
+        chat_model, vector_db = await init_assistant({'database': database, 'assistant': assistant})
+        dp.personal_chat_model[assistant['user_id']] = chat_model
+        dp.personal_vector_db[assistant['user_id']] = vector_db
+    else:
+        assistant_id = await init_openai_assistant({'database': database, 'assistant': assistant, 'client': dp.client})
+        dp.assistants_id[assistant['id']] = assistant_id
     await database.update_assistant(assistant['id'], {'status': 'working'})

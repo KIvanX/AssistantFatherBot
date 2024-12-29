@@ -13,7 +13,7 @@ async def get_db_pool():
 
 async def add_user(user_id: int):
     async with dp.db_pool.acquire() as connection:
-        await connection.execute('INSERT INTO users(id) VALUES ($1)', user_id)
+        await connection.execute('INSERT INTO users(id, balance) VALUES ($1, $2)', user_id, 100)
 
 
 async def get_users(user_id=None):

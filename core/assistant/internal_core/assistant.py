@@ -13,6 +13,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from . import database as in_database
 from .custom_models import JinaEmbeddings
 from .config import dp as in_dp
+from .utils import calc_price
 
 
 async def init_assistant(external_data=None):
@@ -42,6 +43,7 @@ async def init_assistant(external_data=None):
 
 async def get_message(message: types.Message, state: FSMContext, external_data=None):
     bot = external_data['bot'] if external_data else in_dp.bot
+    database = external_data['database'] if external_data else in_database
     assistant = external_data['assistant'] if external_data else in_dp.assistant
     chat_model = external_data['chat_model'] if external_data else in_dp.chat_model
     vector_db = external_data['vector_db'] if external_data else in_dp.vector_db
@@ -59,7 +61,7 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
         retrieved_docs = vector_db.similarity_search(message.text, k=5)
         prompt += "\nDocuments: " + " ".join([doc.page_content for doc in retrieved_docs]) + "\n"
 
-    prompt += ("\nSystem: Старайся дать ответ, в котором имеется полная информация об обсуждаемом объекте,"
+    prompt += ("\nSystem: Старайся дать ответ, в котором имеется полная информация об обсуждаемом объекте, "
                "поскольку позже в Documents может не быть нужной тебе информации. "
                "Если же предоставишь полную информацию, то сможешь найти ее в истории беседы.\n\n")
 
@@ -68,7 +70,11 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
         f.write(prompt)
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
-    response = chat_model.invoke(prompt).content
-    thread[str(message.chat.id)].extend([("Human", message.text), ("Assistant", response)])
+    response = chat_model.invoke(prompt)
+    price = await calc_price(response.response_metadata)
+    user = await database.get_users(message.chat.id)
+    await database.update_user(message.chat.id, {'balance': user['balance'] - price})
+    price_txt = '\n<i>Цена: ' + str(round(price, 8)) + '₽</i>'
+    thread[str(message.chat.id)].extend([("Human", message.text), ("Assistant", response.content)])
     await state.update_data(thread=thread)
-    await message.answer(response)
+    await message.answer(response.content + price_txt)

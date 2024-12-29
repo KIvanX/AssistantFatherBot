@@ -18,10 +18,12 @@ from core.utils import check_token
 @dp.callback_query(F.data == 'start')
 async def start(data, state: FSMContext):
     message: types.Message = data.message if 'message' in dict(data) else data
+    user = await database.get_users(message.chat.id)
     await state.clear()
 
-    if not await database.get_users(message.chat.id):
+    if not user:
         await database.add_user(message.chat.id)
+        user = await database.get_users(message.chat.id)
 
     keyboard = InlineKeyboardBuilder()
     for assistant in await database.get_assistants(message.chat.id):
@@ -29,11 +31,61 @@ async def start(data, state: FSMContext):
         keyboard.add(types.InlineKeyboardButton(text=statuses[assistant['status']] + assistant['name'],
                                                 callback_data=SelectAssistant(id=assistant['id']).pack()))
     keyboard.adjust(2)
-    keyboard.row(types.InlineKeyboardButton(text='➕ Создать ассистента', callback_data='create_assistant'), width=1)
+    keyboard.row(types.InlineKeyboardButton(text='➕ Создать ассистента', callback_data='create_assistant'))
+    keyboard.row(types.InlineKeyboardButton(text='💰 Пополнить баланс', callback_data='top_up_balance'))
     ans = message.answer if 'message' not in dict(data) else message.edit_text
     await ans(f'<b>Добро пожаловать!</b>\n\nЗдесь Вы можете создать и администрировать своих ассистентов.\n\n'
-              f'<b>Ассистент</b> - это бот, который поможет Вам в общении с клиентами',
+              f'<b>Ассистент</b> - это бот, который поможет Вам в общении с клиентами\n\n'
+              f'Баланс: {round(user["balance"], 2)}₽',
               reply_markup=keyboard.as_markup())
+
+
+@dp.callback_query(F.data == 'top_up_balance')
+async def top_up_balance(call: types.CallbackQuery, state: FSMContext):
+    await state.set_state(BaseAssistantStates.top_up_balance)
+    await state.update_data(message_id=call.message.message_id)
+
+    keyboard = InlineKeyboardBuilder()
+    for k in [30, 100, 200, 300, 500, 1000]:
+        keyboard.add(types.InlineKeyboardButton(text=str(k) + '₽', callback_data='pay_' + str(k)))
+    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='start'))
+    keyboard.adjust(3, 3, 1)
+
+    await call.message.edit_text(f'Выберите сумму пополнения или введите свою', reply_markup=keyboard.as_markup())
+
+
+@dp.callback_query(F.data.in_(['pay_30', 'pay_100', 'pay_200', 'pay_300', 'pay_500', 'pay_1000']),
+                   BaseAssistantStates.top_up_balance)
+@dp.message(F.text.isdigit(), BaseAssistantStates.top_up_balance)
+async def top_up_balance(data, state: FSMContext):
+    message: types.Message = data.message if 'message' in dict(data) else data
+    await state.set_state()
+
+    if isinstance(data, types.Message):
+        amount = int(data.text)
+        await message.delete()
+    else:
+        amount = int(data.data.split('_')[1])
+
+    url = 'https://qiwi.com/payment/form/99?extra%5B%27account%27%5D=' + str(amount)
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(text='Оплачено', callback_data='check_payment'))
+    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='start'))
+
+    await state.update_data(amount=amount)
+    mes_id = (await state.get_data()).get('message_id')
+    await bot.edit_message_text(f'Перейдите по <a href="{url}">ссылке</a> для оплаты', chat_id=message.chat.id,
+                                message_id=mes_id, reply_markup=keyboard.as_markup())
+
+
+@dp.callback_query(F.data == 'check_payment')
+async def check_payment(call: types.CallbackQuery, state: FSMContext):
+    amount = (await state.get_data()).get('amount')
+    user = await database.get_users(call.message.chat.id)
+    await database.update_user(call.message.chat.id, {'balance': user['balance'] + amount})
+    keyboard = InlineKeyboardBuilder()
+    keyboard.row(types.InlineKeyboardButton(text='🏚 Меню', callback_data='start'))
+    await call.message.edit_text(f'Баланс пополнен на {amount}₽', reply_markup=keyboard.as_markup())
 
 
 @dp.callback_query(F.data == 'create_assistant')

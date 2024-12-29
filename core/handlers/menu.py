@@ -34,6 +34,9 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
             f'Ссылка на чат с ботом: @{assistant["username"]}\n\n'
             f'{statuses.get(assistant["status"], "?")}\n\n')
 
+    if assistant['is_personal']:
+        text = text.replace('Ассистент', 'Личный ассистент', 1)
+        text = text.replace(f'Ссылка на чат с ботом: @{assistant["username"]}\n\n', '')
     if assistant['status'] == 'init':
         asyncio.create_task(wait_assistant_init(assistant['id'], state, (data, callback_data, state)))
     await state.update_data(assistant_id=callback_data.id)
@@ -241,7 +244,7 @@ async def commercial_models(call: types.CallbackQuery, state: FSMContext):
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
 
     keyboard = InlineKeyboardBuilder()
-    for model in ["gpt-4o", "chatgpt-4o-latest", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
+    for model in ["gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
                   "GigaChat", "GigaChat-Pro", "GigaChat-Max"]:
         modes_txt = '✅ ' + model if model == assistant['model'] else model
         keyboard.add(types.InlineKeyboardButton(text=modes_txt, callback_data=f'assistant_model_{model}'))

@@ -4,6 +4,7 @@ from aiogram.fsm.state import StatesGroup, State
 class BaseAssistantStates(StatesGroup):
     in_panel = State()
     auto_create = State()
+    top_up_balance = State()
 
 
 class CreateAssistantStates(StatesGroup):
