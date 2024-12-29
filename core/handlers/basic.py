@@ -13,6 +13,7 @@ from core.handlers.menu import assistant_menu
 from core.states import CreateAssistantStates, BaseAssistantStates
 from core.static.prompts import auto_create_assistant_text
 from core.utils import check_token
+import yookassa
 
 
 @dp.callback_query(F.data == 'start')
@@ -67,25 +68,38 @@ async def top_up_balance(data, state: FSMContext):
     else:
         amount = int(data.data.split('_')[1])
 
-    url = 'https://qiwi.com/payment/form/99?extra%5B%27account%27%5D=' + str(amount)
+    payment = yookassa.Payment.create({
+        "amount": {"value": amount, "currency": "RUB"},
+        "confirmation": {"type": "redirect", "return_url": "https://t.me/assistants_father_bot"},
+        "capture": True,
+        "payment_method_data": {"type": "bank_card"},
+        "description": f'Пополнение баланса на {amount}₽'
+    })
+
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='Оплачено', callback_data='check_payment'))
-    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='start'))
+    keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='top_up_balance'))
 
-    await state.update_data(amount=amount)
+    await state.update_data(amount=amount, payment_id=payment.id)
     mes_id = (await state.get_data()).get('message_id')
-    await bot.edit_message_text(f'Перейдите по <a href="{url}">ссылке</a> для оплаты', chat_id=message.chat.id,
-                                message_id=mes_id, reply_markup=keyboard.as_markup())
+    await bot.edit_message_text(f'Перейдите по <a href="{payment.confirmation.confirmation_url}">ссылке</a> для оплаты',
+                                chat_id=message.chat.id, message_id=mes_id, reply_markup=keyboard.as_markup())
 
 
 @dp.callback_query(F.data == 'check_payment')
 async def check_payment(call: types.CallbackQuery, state: FSMContext):
-    amount = (await state.get_data()).get('amount')
-    user = await database.get_users(call.message.chat.id)
-    await database.update_user(call.message.chat.id, {'balance': user['balance'] + amount})
-    keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='🏚 Меню', callback_data='start'))
-    await call.message.edit_text(f'Баланс пополнен на {amount}₽', reply_markup=keyboard.as_markup())
+    state_data = await state.get_data()
+    payment = yookassa.Payment.find_one(state_data['payment_id'])
+
+    if payment.status == 'succeeded':
+        amount = (await state.get_data()).get('amount')
+        user = await database.get_users(call.message.chat.id)
+        await database.update_user(call.message.chat.id, {'balance': user['balance'] + amount})
+        keyboard = InlineKeyboardBuilder()
+        keyboard.row(types.InlineKeyboardButton(text='🏚 Меню', callback_data='start'))
+        await call.message.edit_text(f'✅ Баланс пополнен на {amount}₽', reply_markup=keyboard.as_markup())
+    else:
+        await call.answer('Оплата еще не прошла')
 
 
 @dp.callback_query(F.data == 'create_assistant')

@@ -49,7 +49,6 @@ async def main():
     dp.assistants_id = {}
 
     await bot.set_my_commands([types.BotCommand(command="start", description="Старт")])
-    # dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", '')
 
     for user in await database.get_users():
         for assistant in await database.get_assistants(user['id']):

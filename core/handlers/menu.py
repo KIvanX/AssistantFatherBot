@@ -40,8 +40,11 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
     if assistant['status'] == 'init':
         asyncio.create_task(wait_assistant_init(assistant['id'], state, (data, callback_data, state)))
     await state.update_data(assistant_id=callback_data.id)
-    await bot.edit_message_text(text, chat_id=message.chat.id, reply_markup=keyboard.as_markup(),
-                                message_id=state_data.get('message_id', message.message_id))
+    try:
+        await bot.edit_message_text(text, chat_id=message.chat.id, reply_markup=keyboard.as_markup(),
+                                    message_id=state_data.get('message_id', message.message_id))
+    except:
+        pass
 
 
 @dp.callback_query(F.data == 'edit_assistant')
@@ -191,7 +194,12 @@ async def delete_documents_commit(call: types.CallbackQuery, state: FSMContext, 
 
 @dp.callback_query(F.data == 'change_assistant_status')
 async def change_assistant_status(call: types.CallbackQuery, state: FSMContext):
+    user = await database.get_users(call.message.chat.id)
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
+    if user['balance'] <= 0 and ('gpt' in assistant['model'].lower() or 'gigachat' in assistant['model'].lower()):
+        await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})
+        return await call.answer('На вашем балансе недостаточно средств для работы этого ассистента')
+
     if assistant['pid']:
         try:
             os.kill(assistant['pid'], signal.SIGTERM)
@@ -206,6 +214,7 @@ async def change_assistant_status(call: types.CallbackQuery, state: FSMContext):
                 for a in await database.get_assistants(call.message.chat.id):
                     if a['is_personal'] and a['status'] != 'stopped':
                         await database.update_assistant(a['id'], {'status': 'stopped'})
+                await database.update_assistant(assistant['id'], {'status': 'init'})
                 asyncio.create_task(init_personal_assistant(assistant))
             else:
                 await database.update_assistant(assistant['id'], {'status': 'stopped'})
@@ -258,6 +267,9 @@ async def commercial_models(call: types.CallbackQuery, state: FSMContext):
 async def assistant_models_commit(call: types.CallbackQuery, state: FSMContext):
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
     await database.update_assistant(assistant['id'], {'model': call.data[16:]})
+    if 'gpt' not in call.data.lower() or call.data == 'gpt-4':
+        await database.update_assistant(assistant['id'], {'own_search': True})
+
     await call.answer(f'Выбрана модель {call.data[16:]}')
     await restart_working_assistant(assistant['id'])
     if 'gpt' in call.data.lower() or 'gigachat' in call.data.lower():

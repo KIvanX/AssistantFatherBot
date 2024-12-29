@@ -36,6 +36,10 @@ async def check_token(message: types.Message):
 
 async def start_assistant(assistant_id: int):
     assistant = await database.get_assistant(assistant_id)
+    user = await database.get_users(assistant['user_id'])
+    if user['balance'] <= 0 and ('gpt' in assistant['model'].lower() or 'gigachat' in assistant['model'].lower()):
+        await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})
+        return 0
 
     logging.warning(f'Start assistant {assistant_id}')
     dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", str(assistant['id']))
@@ -45,7 +49,7 @@ async def start_assistant(assistant_id: int):
 
 async def restart_working_assistant(assistant_id: int):
     assistant = await database.get_assistant(assistant_id)
-    if assistant['pid']:
+    if assistant['status'] == 'working' and assistant['pid']:
         try:
             os.kill(assistant['pid'], signal.SIGTERM)
         except:
@@ -53,7 +57,7 @@ async def restart_working_assistant(assistant_id: int):
             return 0
 
         await start_assistant(assistant_id)
-    elif assistant['is_personal']:
+    elif assistant['status'] == 'working' and assistant['is_personal']:
         asyncio.create_task(init_personal_assistant(assistant))
 
 
@@ -69,6 +73,11 @@ async def check_assistant_status(assistant: dict):
 
 
 async def init_personal_assistant(assistant: dict):
+    user = await database.get_users(assistant['user_id'])
+    if user['balance'] <= 0 and ('gpt' in assistant['model'].lower() or 'gigachat' in assistant['model'].lower()):
+        await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})
+        return 0
+
     await database.update_assistant(assistant['id'], {'status': 'init'})
     if assistant['own_search'] or 'gpt' not in assistant['model'].lower():
         chat_model, vector_db = await init_assistant({'database': database, 'assistant': assistant})

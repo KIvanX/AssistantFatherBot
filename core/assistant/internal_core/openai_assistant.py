@@ -5,7 +5,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.enums.chat_action import ChatAction
 from . import database as in_database
 from .config import dp as in_dp
-from .utils import calc_price
+from .utils import calc_price, check_balance
 
 
 async def init_openai_assistant(external_data=None):
@@ -76,6 +76,7 @@ async def get_openai_message(message: types.Message, state: FSMContext, external
                                                                   'completion_tokens': run.usage.completion_tokens}})
                         user = await database.get_users(message.chat.id)
                         await database.update_user(message.chat.id, {'balance': user['balance'] - price})
+                        await check_balance(user, database)
                         text += f'\n<i>Цена: {round(price, 8)}₽</i>'
                         await message.answer(text)
     else:

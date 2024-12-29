@@ -1,3 +1,6 @@
+import os
+import signal
+
 
 async def calc_price(params: dict):
     model = params['model_name']
@@ -37,3 +40,15 @@ async def calc_price(params: dict):
         output_cost = params['token_usage'].total_tokens * price[model]['output_cost'] / 5_000_000
 
     return input_cost + output_cost
+
+
+async def check_balance(user: dict, database):
+    if user['balance'] <= 0:
+        for assistant in await database.get_assistants(user['id']):
+            if 'gpt' in assistant['model'].lower() or 'gigachat' in assistant['model'].lower():
+                if assistant['pid']:
+                    try:
+                        os.kill(assistant['pid'], signal.SIGTERM)
+                    except:
+                        pass
+                await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})

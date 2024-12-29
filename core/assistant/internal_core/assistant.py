@@ -13,7 +13,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from . import database as in_database
 from .custom_models import JinaEmbeddings
 from .config import dp as in_dp
-from .utils import calc_price
+from .utils import calc_price, check_balance
 
 
 async def init_assistant(external_data=None):
@@ -74,6 +74,7 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
     price = await calc_price(response.response_metadata)
     user = await database.get_users(message.chat.id)
     await database.update_user(message.chat.id, {'balance': user['balance'] - price})
+    await check_balance(user, database)
     price_txt = '\n<i>Цена: ' + str(round(price, 8)) + '₽</i>'
     thread[str(message.chat.id)].extend([("Human", message.text), ("Assistant", response.content)])
     await state.update_data(thread=thread)
