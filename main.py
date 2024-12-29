@@ -21,7 +21,7 @@ from core.assistant.internal_core.openai_assistant import get_openai_message
 async def text_handler(message: types.Message, state: FSMContext):
     for assistant in await database.get_assistants(message.chat.id):
         if assistant['is_personal'] and assistant['status'] == 'working':
-            if 'gpt' in assistant["model"].lower() and assistant["own_search"]:
+            if assistant["own_search"] or 'gpt' not in assistant["model"].lower():
                 await get_message(message, state, external_data={'bot': bot, 'assistant': assistant,
                                                                  'database': database,
                                                                  'chat_model': dp.personal_chat_model[message.chat.id],
