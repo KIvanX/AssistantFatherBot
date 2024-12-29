@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import sys
 import os
 
 import dotenv
@@ -41,7 +40,7 @@ async def main():
     else:
         dp.client = AsyncOpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
         dp.message.register(get_openai_message, F.text[0] != '/')
-        await init_openai_assistant()
+        dp.assistant_id = await init_openai_assistant()
 
     logging.warning(f'Assistant {dp.assistant["id"]} is ready to work!')
     await database.update_assistant(dp.assistant['id'], {'status': 'working'})

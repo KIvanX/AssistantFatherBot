@@ -36,7 +36,7 @@ async def init_openai_assistant(external_data=None):
 async def get_openai_message(message: types.Message, state: FSMContext, external_data=None):
     bot = external_data['bot'] if external_data else in_dp.bot
     database = external_data['database'] if external_data else in_database
-    assistant_id = external_data['assistant_id'] if external_data else in_dp.assistant
+    assistant_id = external_data['assistant_id'] if external_data else in_dp.assistant_id
     client = external_data['client'] if external_data else in_dp.client
 
     status = ['wait']

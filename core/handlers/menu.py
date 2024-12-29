@@ -32,6 +32,7 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
     statuses = {'init': '🟡 Запускается...', 'working': '🟢 Работает', 'stopped': '🔴 Остановлен'}
     text = (f'Ассистент <b>{assistant["name"]}</b>\n\n'
             f'Ссылка на чат с ботом: @{assistant["username"]}\n\n'
+            f'Языковая модель: {assistant["model"]}\n\n'
             f'{statuses.get(assistant["status"], "?")}\n\n')
 
     if assistant['is_personal']:
@@ -267,7 +268,7 @@ async def commercial_models(call: types.CallbackQuery, state: FSMContext):
 async def assistant_models_commit(call: types.CallbackQuery, state: FSMContext):
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
     await database.update_assistant(assistant['id'], {'model': call.data[16:]})
-    if 'gpt' not in call.data.lower() or call.data == 'gpt-4':
+    if 'gpt' not in call.data.lower() or call.data[16:] == 'gpt-4':
         await database.update_assistant(assistant['id'], {'own_search': True})
 
     await call.answer(f'Выбрана модель {call.data[16:]}')
