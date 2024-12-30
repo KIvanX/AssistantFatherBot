@@ -82,3 +82,19 @@ async def add_document(assistant_id: int, file_name: str):
 async def delete_document(document_id: int):
     async with dp.db_pool.acquire() as connection:
         await connection.execute('DELETE FROM documents WHERE id = $1', document_id)
+
+
+async def get_translations() -> dict:
+    async with dp.db_pool.acquire() as connection:
+        tr = {}
+        for line in await connection.fetch('SELECT * FROM translate'):
+            tr[line[0]] = {'ru': line[0], 'en': line[1], 'it': line[2], 'fr': line[3],
+                           'de': line[4], 'ja': line[5], 'zh': line[6], 'ar': line[7]}
+        return tr
+
+
+async def add_translation(translate: dict):
+    async with dp.db_pool.acquire() as connection:
+        await connection.execute('INSERT INTO translate VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                                 translate['ru'], translate['en'], translate['it'], translate['fr'],
+                                 translate['de'], translate['ja'], translate['zh'], translate['ar'])

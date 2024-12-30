@@ -1,4 +1,4 @@
-
+import asyncio
 import os
 import dotenv
 import yookassa
@@ -12,7 +12,8 @@ dotenv.load_dotenv()
 
 bot = Bot(os.environ.get('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 storage = RedisStorage.from_url('redis://localhost:6379/5')
-dp = Dispatcher(storage=storage)
+loop = asyncio.get_event_loop()
+dp = Dispatcher(storage=storage, loop=loop)
 yookassa.Configuration.account_id = os.environ['UKASSA_SHOP_ID']
 yookassa.Configuration.secret_key = os.environ['UKASSA_SECRET_KEY']
 
