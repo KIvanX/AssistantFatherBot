@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core import database
+from core.assistant.internal_core.utils import price
 from core.config import dp, bot
 from core.filters import DeleteDocument, SelectAssistant
 from core.states import EditAssistantStates, KnowledgeBaseAssistantStates, BaseAssistantStates
@@ -246,7 +247,8 @@ async def opensource_models(call: types.CallbackQuery, state: FSMContext):
     keyboard.adjust(2)
     keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='assistant_model_type'))
 
-    await call.message.edit_text('Выберите языковую модель ассистента', reply_markup=keyboard.as_markup())
+    await call.message.edit_text('Выберите языковую модель ассистента\n\n'
+                                 '❕ Все Opensource модели бесплатные', reply_markup=keyboard.as_markup())
 
 
 @dp.callback_query(F.data == 'commercial_models')
@@ -256,12 +258,18 @@ async def commercial_models(call: types.CallbackQuery, state: FSMContext):
     keyboard = InlineKeyboardBuilder()
     for model in ["gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
                   "GigaChat", "GigaChat-Pro", "GigaChat-Max"]:
-        modes_txt = '✅ ' + model if model == assistant['model'] else model
+        modes_txt = ('✅ ' + model if model == assistant['model'] else model) + ' - '
+        pr = price[model]
+        if 'gpt' in model.lower():
+            modes_txt += str(round((pr['input_cost'] / 10000 * 800 + pr['input_cost'] / 10000 * 200), 2)) + '₽'
+        else:
+            modes_txt += str(round(pr['output_cost'] / 5000000 * 1000, 2)) + '₽'
         keyboard.add(types.InlineKeyboardButton(text=modes_txt, callback_data=f'assistant_model_{model}'))
     keyboard.adjust(2)
     keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='assistant_model_type'))
 
-    await call.message.edit_text('Выберите языковую модель ассистента', reply_markup=keyboard.as_markup())
+    await call.message.edit_text('Выберите языковую модель ассистента\n\n'
+                                 '❕ Цена отражает среднюю стоимость одного запроса', reply_markup=keyboard.as_markup())
 
 
 @dp.callback_query(lambda call: call.data.startswith('assistant_model_'))

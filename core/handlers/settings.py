@@ -20,7 +20,7 @@ async def assistant_settings(call: types.CallbackQuery, state: FSMContext):
     text = '⚙️ Настройки'
     keyboard = InlineKeyboardBuilder()
     if 'gpt' in assistant['model'].lower() and assistant['model'] != 'gpt-4':
-        system = '\n\nИспользуется RAG система ' + ('бота' if assistant['own_search'] else 'от OpenAI')
+        system = '\n\nИспользуется RAG система ' + ('бота' if assistant['own_search'] else 'от OpenAI (10₽/Гб)')
         text += f'{system}\n\n<b>RAG</b> - система поиска релевантной информации в документах из "📚 База знаний"'
         change_system = '🔄 Использовать RAG бота' if not assistant['own_search'] else '🔄 Использовать RAG от OpenAI'
         keyboard.row(types.InlineKeyboardButton(text=change_system, callback_data='change_RAG_system'))

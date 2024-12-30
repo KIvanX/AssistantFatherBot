@@ -1,10 +1,7 @@
 import os
 import signal
 
-
-async def calc_price(params: dict):
-    model = params['model_name']
-    price = {
+price = {
         "gpt-4o-2024-11-20": {"input_cost": 1.25, "output_cost": 5},
         "gpt-4o-2024-08-06": {"input_cost": 1.25, "output_cost": 5},
         "gpt-4o": {"input_cost": 1.25, "output_cost": 5},
@@ -21,10 +18,19 @@ async def calc_price(params: dict):
         "gpt-3.5-turbo-0125": {"input_cost": 0.25, "output_cost": 0.75},
         "gpt-3.5-turbo": {"input_cost": 0.25, "output_cost": 0.75},
 
+        "GigaChat": {"input_cost": 0, "output_cost": 1000},
         "GigaChat:1.0.26.20": {"input_cost": 0, "output_cost": 1000},
+
+        "GigaChat-Pro": {"input_cost": 0, "output_cost": 7275},
         "GigaChat-Pro:1.0.26.20": {"input_cost": 0, "output_cost": 7275},
+
+        "GigaChat-Max": {"input_cost": 0, "output_cost": 7566},
         "GigaChat-Max:1.0.26.20": {"input_cost": 0, "output_cost": 7566},
     }
+
+
+async def calc_price(params: dict):
+    model = params['model_name']
 
     if model not in price:
         if 'gpt' in model.lower() or 'gigachat' in model.lower():

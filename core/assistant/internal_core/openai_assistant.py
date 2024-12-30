@@ -20,6 +20,11 @@ async def init_openai_assistant(external_data=None):
                 vector_store_id=vector_store.id,
                 files=[(doc['file_name'], f)])
 
+    vs = await client.beta.vector_stores.retrieve(vector_store_id=vector_store.id)
+    price = int(vs.usage_bytes) / 1024**3 * 0.1 * 100
+    user = await database.get_users(assistant['user_id'])
+    await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
+
     assistant = await client.beta.assistants.create(
         name="Assistant",
         instructions=assistant["instruction"],
