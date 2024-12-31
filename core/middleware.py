@@ -17,24 +17,24 @@ class TranslaterMiddleware(BaseMiddleware):
     ) -> Any:
         language = 'ru'
         if event.callback_query:
-            language = (await database.get_users(event.callback_query.message.chat.id))['language']
+            language = (await database.get_users(event.callback_query.message.chat.id)).get('language', 'ru')
         elif event.message:
-            language = (await database.get_users(event.message.chat.id))['language']
+            language = (await database.get_users(event.message.chat.id)).get('language', 'ru')
 
-        data['T'] = lambda ru_text, *args: T(ru_text, language or 'ru', *args)
+        data['T'] = lambda ru_text, *args: translater(ru_text, language or 'ru', *args)
         return await handler(event, data)
 
 
-async def T(ru_text, language, *args):
+async def translater(ru_text, language, *args):
     if ru_text not in dp.translations:
-        dp.translations[ru_text] = await get_translate(ru_text)
+        dp.translations[ru_text] = await load_translate(ru_text)
     tr = dp.translations[ru_text][language]
     for i in range(len(args), 0, -1):
         tr = tr.replace(f'_{i}', str(args[i - 1]))
     return tr
 
 
-async def get_translate(ru_text):
+async def load_translate(ru_text):
     tr = (await dp.client.chat.completions.create(
         model="gpt-4o-mini",
         messages=[{"role": "system", "content": 'Переведи текст на все нужные языки и верни ответ в виде json, '

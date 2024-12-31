@@ -10,6 +10,7 @@ from core import database
 from core.config import dp, bot
 from core.filters import SelectAssistant
 from core.handlers.menu import assistant_menu
+from core.middleware import translater
 from core.states import CreateAssistantStates, BaseAssistantStates
 from core.static.prompts import auto_create_assistant_text
 from core.utils import check_token
@@ -51,13 +52,9 @@ async def start(data, state: FSMContext, T):
 
 
 @dp.callback_query(F.data.in_(['set_ru', 'set_en', 'set_it', 'set_fr', 'set_de', 'set_ja', 'set_zh', 'set_ar']))
-async def set_language(call: types.CallbackQuery, T):
+async def set_language(call: types.CallbackQuery, state: FSMContext, T):
     await database.update_user(call.message.chat.id, {'language': call.data.split('_')[1]})
-    await call.message.delete()
-
-    keyboard = InlineKeyboardBuilder()
-    keyboard.row(types.InlineKeyboardButton(text='🏚 ' + await T('Меню'), callback_data='start'))
-    await call.message.answer('✅ ' + await T('Язык изменен'), reply_markup=keyboard.as_markup())
+    await start(call, state, lambda ru_text, *args: translater(ru_text, call.data.split('_')[1], *args))
 
 
 @dp.message(Command('language'))
