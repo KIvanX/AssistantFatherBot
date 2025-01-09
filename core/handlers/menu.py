@@ -103,7 +103,7 @@ async def edit_assistant_parameter(call: types.CallbackQuery, state: FSMContext,
 
 
 @dp.message(F.text[0] != '/', EditAssistantStates.parameter)
-async def edit_assistant_commit(message: types.Message, state: FSMContext):
+async def edit_assistant_commit(message: types.Message, state: FSMContext, T):
     await state.set_state()
 
     state_data = await state.get_data()
@@ -111,7 +111,7 @@ async def edit_assistant_commit(message: types.Message, state: FSMContext):
 
     await restart_working_assistant(state_data['assistant_id'])
     await message.delete()
-    await edit_assistant(message, state)
+    await edit_assistant(message, state, T)
 
 
 @dp.callback_query(F.data == 'knowledge_base')
