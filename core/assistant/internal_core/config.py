@@ -8,7 +8,7 @@ DEBUG = os.environ.get('DEBUG', '').lower() != 'false'
 storage = RedisStorage.from_url('redis://localhost:6379/5')
 dp = Dispatcher(storage=storage)
 
-if not DEBUG:
+if not DEBUG and os.environ.get('ASSISTANT_ID'):
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
