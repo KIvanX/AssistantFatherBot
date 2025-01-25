@@ -43,12 +43,12 @@ async def get_assistant(assistant_id: int) -> list:
 
 
 async def add_assistant(user_id: int, is_personal: bool, token: str, name: str, start_text: str, model: str,
-                        instruction: str, username: str) -> int:
+                        instruction: str, username: str, emb_model='jina-embeddings-v3') -> int:
     async with dp.db_pool.acquire() as connection:
         return (await connection.fetch('INSERT INTO assistants(user_id, is_personal, token, name, start_text, model, '
-                                       'instruction, username) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id',
-                                       user_id, is_personal, token, name, start_text, model, instruction,
-                                       username))[0][0]
+                                       'instruction, username, emb_model) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) '
+                                       'RETURNING id', user_id, is_personal, token, name, start_text, model,
+                                       instruction, username, emb_model))[0][0]
 
 
 async def update_assistant(assistant_id: int, data: dict):
@@ -98,3 +98,10 @@ async def add_translation(translate: dict):
         await connection.execute('INSERT INTO translate VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
                                  translate['ru'], translate['en'], translate['it'], translate['fr'],
                                  translate['de'], translate['ja'], translate['zh'], translate['ar'])
+
+
+async def add_message(user_id: int, assistant_id: int, author: str, message: str, price=0, model=''):
+    async with dp.db_pool.acquire() as connection:
+        await connection.execute('INSERT INTO messages(user_id, assistant_id, author, message, price, model) '
+                                 'VALUES ($1, $2, $3, $4, $5, $6)',
+                                 user_id, assistant_id, author, message, price, model)

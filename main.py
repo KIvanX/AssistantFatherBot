@@ -31,7 +31,7 @@ async def text_handler(message: types.Message, state: FSMContext):
                 await get_openai_message(message, state,
                                          external_data={'bot': bot, 'database': database,
                                                         'assistant_id': dp.assistants_id[assistant['id']],
-                                                        'client': dp.client})
+                                                        'client': dp.client, 'assistant': assistant})
 
 
 async def main():

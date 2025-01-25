@@ -11,11 +11,6 @@ async def get_db_pool():
     return db_pool
 
 
-async def add_user(user_id: int):
-    async with dp.db_pool.acquire() as connection:
-        await connection.execute('INSERT INTO users(id) VALUES ($1)', user_id)
-
-
 async def get_users(user_id=None):
     async with dp.db_pool.acquire() as connection:
         if user_id is None:
@@ -43,21 +38,10 @@ async def get_assistant(assistant_id: int) -> list:
         return assistant
 
 
-async def add_assistant(user_id: int, token: str):
-    async with dp.db_pool.acquire() as connection:
-        return (await connection.fetch('INSERT INTO assistants(user_id, token, name) VALUES ($1, $2, $3) RETURNING id',
-                                       user_id, token, 'Ассистент'))[0][0]
-
-
 async def update_assistant(assistant_id: int, data: dict):
     async with dp.db_pool.acquire() as connection:
         for key in data:
             await connection.execute(f'UPDATE assistants SET {key} = $1 WHERE id = $2', data[key], assistant_id)
-
-
-async def delete_assistant(assistant_id: int):
-    async with dp.db_pool.acquire() as connection:
-        await connection.execute('DELETE FROM assistants WHERE id = $1', assistant_id)
 
 
 async def get_documents(assistant_id: int) -> list:
@@ -71,12 +55,67 @@ async def get_document(document_id: int) -> dict:
         return dict(await connection.fetchrow('SELECT * FROM documents WHERE id = $1', document_id))
 
 
-async def add_document(assistant_id: int, file_name: str):
+async def add_assistant_user(user_id: int, name: str, assistant_id: int):
     async with dp.db_pool.acquire() as connection:
-        return (await connection.fetch('INSERT INTO documents(assistant_id, file_name) VALUES ($1, $2) RETURNING id',
-                                       assistant_id, file_name))[0][0]
+        await connection.execute('INSERT INTO assistant_users(user_id, name, assistant_id) VALUES ($1, $2, $3)',
+                                 user_id, name, assistant_id)
 
 
-async def delete_document(document_id: int):
+async def get_assistant_users(assistant_id: int) -> list:
     async with dp.db_pool.acquire() as connection:
-        await connection.execute('DELETE FROM documents WHERE id = $1', document_id)
+        data = await connection.fetch('SELECT * FROM assistant_users WHERE assistant_id = $1', assistant_id)
+        return [dict(user) for user in data]
+
+
+async def update_assistant_user(user_id: int, data: dict):
+    async with dp.db_pool.acquire() as connection:
+        for key in data:
+            await connection.execute(f'UPDATE assistant_users SET {key} = $1 WHERE user_id = $2', data[key], user_id)
+
+
+async def add_message(user_id: int, assistant_id: int, author: str, message: str, price=0, model=''):
+    async with dp.db_pool.acquire() as connection:
+        await connection.execute('INSERT INTO messages(user_id, assistant_id, author, message, price, model) '
+                                 'VALUES ($1, $2, $3, $4, $5, $6)',
+                                 user_id, assistant_id, author, message, price, model)
+
+
+async def get_messages(user_id: int, assistant_id: int) -> list:
+    async with dp.db_pool.acquire() as connection:
+        data = await connection.fetch('SELECT * FROM messages WHERE user_id = $1 AND assistant_id = $2 '
+                                      'ORDER BY created_at', user_id, assistant_id)
+        return [dict(message) for message in data]
+
+
+async def get_statistics(assistant_id: int) -> dict:
+    statistic = {}
+    async with dp.db_pool.acquire() as connection:
+        users_qsl = "SELECT * FROM assistant_users WHERE assistant_id = $1"
+        res = await connection.fetch(users_qsl, assistant_id)
+        statistic['users'] = len(res)
+        res = await connection.fetch(users_qsl + " AND now() - created_at < '1 hour'::interval;", assistant_id)
+        statistic['new_per_hour'] = len(res)
+        res = await connection.fetch(users_qsl + " AND now() - created_at < '1 day'::interval;", assistant_id)
+        statistic['new_per_day'] = len(res)
+        res = await connection.fetch(users_qsl + " AND now() - created_at < '1 month'::interval;", assistant_id)
+        statistic['new_per_month'] = len(res)
+
+        res = await connection.fetch(users_qsl + " AND is_deleted = false;", assistant_id)
+        statistic['alive_users'] = len(res)
+        return statistic
+
+
+async def get_translations() -> dict:
+    async with dp.db_pool.acquire() as connection:
+        tr = {}
+        for line in await connection.fetch('SELECT * FROM translate'):
+            tr[line[0]] = {'ru': line[0], 'en': line[1], 'it': line[2], 'fr': line[3],
+                           'de': line[4], 'ja': line[5], 'zh': line[6], 'ar': line[7]}
+        return tr
+
+
+async def add_translation(translate: dict):
+    async with dp.db_pool.acquire() as connection:
+        await connection.execute('INSERT INTO translate VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+                                 translate['ru'], translate['en'], translate['it'], translate['fr'],
+                                 translate['de'], translate['ja'], translate['zh'], translate['ar'])

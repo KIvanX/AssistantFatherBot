@@ -41,7 +41,7 @@ async def init_openai_assistant(external_data=None):
 async def get_openai_message(message: types.Message, state: FSMContext, external_data=None):
     bot = external_data['bot'] if external_data else in_dp.bot
     database = external_data['database'] if external_data else in_database
-    assistant_id = external_data['assistant_id'] if external_data else in_dp.assistant_id
+    assistant = external_data['assistant'] if external_data else in_dp.assistant
     client = external_data['client'] if external_data else in_dp.client
 
     status = ['wait']
@@ -59,7 +59,7 @@ async def get_openai_message(message: types.Message, state: FSMContext, external
 
     run = await client.beta.threads.runs.create_and_poll(
         thread_id=(await state.get_data()).get('thread_id'),
-        assistant_id=assistant_id,
+        assistant_id=assistant['id'],
     )
 
     status[0] = 'completed'
@@ -79,10 +79,12 @@ async def get_openai_message(message: types.Message, state: FSMContext, external
                         price = await calc_price({'model_name': run.model,
                                                   'token_usage': {'prompt_tokens': run.usage.prompt_tokens,
                                                                   'completion_tokens': run.usage.completion_tokens}})
-                        user = await database.get_users(message.chat.id)
-                        await database.update_user(message.chat.id, {'balance': user['balance'] - price})
+                        user = await database.get_users(assistant['user_id'])
+                        await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
+                        await database.add_message(message.chat.id, assistant['id'], 'User', message.text)
+                        await database.add_message(message.chat.id, assistant['id'], 'Assistant', text,
+                                                   price=price, model=assistant['model'])
                         await check_balance(user, database)
-                        text += f'\n<i>Цена: {round(price, 8)}₽</i>'
                         await message.answer(text)
     else:
         await message.answer('Что-то пошло не так')

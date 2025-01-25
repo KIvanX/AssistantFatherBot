@@ -7,6 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core import database
+from core.assistant.internal_core.config import help_info
 from core.config import dp, bot
 from core.filters import SelectAssistant
 from core.handlers.menu import assistant_menu
@@ -41,9 +42,11 @@ async def start(data, state: FSMContext, T):
         keyboard.add(types.InlineKeyboardButton(text=statuses[assistant['status']] + assistant['name'],
                                                 callback_data=SelectAssistant(id=assistant['id']).pack()))
     keyboard.adjust(2)
-    keyboard.row(
-        types.InlineKeyboardButton(text='➕ ' + await T('Создать ассистента'), callback_data='create_assistant'))
-    keyboard.row(types.InlineKeyboardButton(text='💰 ' + await T('Пополнить баланс'), callback_data='top_up_balance'))
+    keyboard.row(types.InlineKeyboardButton(text='➕ ' + await T('Создать ассистента'),
+                                            callback_data='create_assistant'))
+    keyboard.row(types.InlineKeyboardButton(text='❔ ' + await T('Справка'),
+                                            url=help_info[user['language']]),
+                 types.InlineKeyboardButton(text='💰 ' + await T('Пополнить баланс'), callback_data='top_up_balance'))
     ans = message.answer if 'message' not in dict(data) else message.edit_text
     await ans(await T('<b>Добро пожаловать!</b>\n\nЗдесь Вы можете создать и администрировать своих ассистентов.\n\n'
                       '<b>Ассистент</b> - это бот, который поможет Вам в общении с клиентами\n\n'
@@ -52,7 +55,7 @@ async def start(data, state: FSMContext, T):
 
 
 @dp.callback_query(F.data.in_(['set_ru', 'set_en', 'set_it', 'set_fr', 'set_de', 'set_ja', 'set_zh', 'set_ar']))
-async def set_language(call: types.CallbackQuery, state: FSMContext, T):
+async def set_language(call: types.CallbackQuery, state: FSMContext):
     await database.update_user(call.message.chat.id, {'language': call.data.split('_')[1]})
     await start(call, state, lambda ru_text, *args: translater(ru_text, call.data.split('_')[1], *args))
 
@@ -140,21 +143,23 @@ async def create_assistant(data, state: FSMContext, T):
                                             callback_data='personal_assistant'))
     keyboard.row(types.InlineKeyboardButton(text='⬅️ ' + await T('Назад'), callback_data='start'))
 
-    await message.edit_text(await T(f'Введите токен Вашего бота\n\n'
-                                    f'Токен можно получить в @BotFather\n\n'
-                                    f'<b>Личный ассистент</b> - ассистент, который будет работать только в этом '
-                                    f'чате и доступ к нему будет только у Вас.'), reply_markup=keyboard.as_markup())
+    await message.edit_text('📝 ' + await T(f'Введите токен Вашего бота\n\nТокен можно получить в @BotFather\n\n'
+                                           f'<b>Личный ассистент</b> - ассистент, который будет работать только в этом '
+                                           f'чате и доступ к нему будет только у Вас.'),
+                            reply_markup=keyboard.as_markup())
 
 
 @dp.callback_query(F.data == 'auto_create_assistant', CreateAssistantStates.token)
 async def auto_create_assistant(call: types.CallbackQuery, state: FSMContext, T):
     await state.set_state(BaseAssistantStates.auto_create)
     await state.update_data(message_id=call.message.message_id)
+    user = await database.get_users(call.message.chat.id)
+    system = auto_create_assistant_text.replace('_LANGUAGE_', user['language'])
     mes = (await dp.client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "system", "content": await T(auto_create_assistant_text)}]
+        messages=[{"role": "system", "content": system}]
     )).choices[0].message.content
-    await state.update_data(chat=[{"role": "system", "content": await T(auto_create_assistant_text)},
+    await state.update_data(chat=[{"role": "system", "content": system},
                                   {"role": "assistant", "content": mes}])
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='🏚 ' + await T('Меню'), callback_data='start'))
@@ -179,14 +184,20 @@ async def auto_create_assistant_step(message: types.Message, state: FSMContext, 
 
     if '<START>' in mes and '<END>' in mes:
         info = json.loads(mes.split('<START>')[1].split('<END>')[0])
-        try:
-            bot_1 = Bot(info['token'])
-            info['username'] = (await bot_1.get_me()).username
-        except:
-            return await message.answer(await T('Невалидный токен!'), reply_markup=keyboard.as_markup())
+        if not info['is_personal']:
+            try:
+                bot_1 = Bot(info['token'])
+                info['username'] = (await bot_1.get_me()).username
+            except:
+                return await message.answer(await T('Невалидный токен!'), reply_markup=keyboard.as_markup())
 
-        a_id = await database.add_assistant(message.chat.id, False, info['token'], info['name'],
-                                            info['start_text'], info['model'], info['instruction'], info['username'])
+            a_id = await database.add_assistant(message.chat.id, False, info['token'], info['name'],
+                                                info['start_text'], info['model'], info['instruction'],
+                                                info['username'])
+        else:
+            a_id = await database.add_assistant(message.chat.id, True, '', info['name'],
+                                                info['start_text'], info['model'], info['instruction'], '')
+
         if not os.path.exists(f"core/assistant/internal_core/static/{a_id}"):
             os.makedirs(f"core/assistant/internal_core/static/{a_id}")
 
@@ -200,12 +211,11 @@ async def auto_create_assistant_step(message: types.Message, state: FSMContext, 
 
 @dp.callback_query(F.data == 'personal_assistant', CreateAssistantStates.token)
 async def personal_assistant(call: types.CallbackQuery, state: FSMContext, T):
-    info = await bot.get_me()
     assistant_names = [a['name'] for a in await database.get_assistants(call.message.chat.id)]
     la = await T('Личный ассистент')
     name = f'{la} {[i for i in range(1, 1000) if f"{la} {i}" not in assistant_names][0]}'
     a_id = await database.add_assistant(call.message.chat.id, True, '', name,
-                                        await T('Привет! Чем могу помочь?'), 'gpt-4o-mini', '', info.username)
+                                        await T('Привет! Чем могу помочь?'), 'gpt-4o-mini', '', '')
     if not os.path.exists(f"core/assistant/internal_core/static/{a_id}"):
         os.makedirs(f"core/assistant/internal_core/static/{a_id}")
 

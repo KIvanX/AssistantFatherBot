@@ -3,9 +3,8 @@ import json
 from typing import Callable, Dict, Any, Awaitable
 from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
-
-from core import database
-from core.config import dp
+from . import database
+from .config import dp
 
 
 class TranslaterMiddleware(BaseMiddleware):
@@ -44,6 +43,7 @@ async def load_translate(ru_text):
                                                 'только json с переводами. Русский текст оставь как есть. \n\n'
                                                 'Текст: «' + ru_text + '».'}]
     )).choices[0].message.content
+
     tr = tr.replace('```json\n', '').replace('```', '')
     try:
         tr_json = json.loads(tr)

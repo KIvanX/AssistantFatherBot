@@ -8,10 +8,10 @@ from langchain_community.chat_models import GigaChat
 from langchain_community.document_loaders import TextLoader
 from langchain_community.vectorstores import Chroma
 from langchain_groq import ChatGroq
-from langchain_openai import ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from . import database as in_database
-from .custom_models import JinaEmbeddings
+from .custom_models import JinaEmbeddings, ChatEdenAI
 from .config import dp as in_dp
 from .utils import calc_price, check_balance
 
@@ -25,6 +25,8 @@ async def init_assistant(external_data=None):
                               verify_ssl_certs=False)
     elif 'gpt' in assistant["model"].lower():
         chat_model = ChatOpenAI(api_key=os.environ['OPENAI_API_KEY'], model=assistant["model"])
+    elif 'claude' in assistant["model"].lower():
+        chat_model = ChatEdenAI(api_key=os.environ["EDENAI_API_KEY"], provider="anthropic", model=assistant["model"])
     else:
         chat_model = ChatGroq(temperature=0.6, model_name=assistant["model"], api_key=os.environ['GROQ_API_KEY'])
 
@@ -33,7 +35,11 @@ async def init_assistant(external_data=None):
         path = f'core/assistant/internal_core/static/{assistant["id"]}/documents/' + doc['file_name']
         documents.extend(TextLoader(path).load())
 
-    embedding_model = JinaEmbeddings(token=os.environ['JINA_API_KEY'])
+    if 'jina' in assistant['emb_model']:
+        embedding_model = JinaEmbeddings(os.environ['JINA_API_KEY'], assistant['emb_model'])
+    else:
+        embedding_model = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'], model=assistant['emb_model'])
+
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=400)
     document_chunks = text_splitter.split_documents(documents)
     vector_db = Chroma.from_documents(document_chunks, embedding_model,
@@ -61,9 +67,9 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
         retrieved_docs = vector_db.similarity_search(message.text, k=5)
         prompt += "\nDocuments: " + " ".join([doc.page_content for doc in retrieved_docs]) + "\n"
 
-    prompt += ("\nSystem: Старайся дать ответ, в котором имеется полная информация об обсуждаемом объекте, "
-               "поскольку позже в Documents может не быть нужной тебе информации. "
-               "Если же предоставишь полную информацию, то сможешь найти ее в истории беседы.\n\n")
+        prompt += ("\nSystem: Старайся дать ответ, в котором имеется полная информация об обсуждаемом объекте, "
+                   "поскольку позже в Documents может не быть нужной тебе информации. "
+                   "Если же предоставишь полную информацию, то сможешь найти ее в истории беседы.\n")
 
     prompt += f"\nHuman: {message.text}\n\nAssistant: "
     with open(f'core/assistant/internal_core/static/{assistant["id"]}/prompt.log', 'w') as f:
@@ -72,10 +78,12 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     response = chat_model.invoke(prompt)
     price = await calc_price(response.response_metadata)
-    user = await database.get_users(message.chat.id)
-    await database.update_user(message.chat.id, {'balance': user['balance'] - price})
+    user = await database.get_users(assistant['user_id'])
+    await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
     await check_balance(user, database)
-    price_txt = '\n<i>Цена: ' + str(round(price, 8)) + '₽</i>'
     thread[str(message.chat.id)].extend([("Human", message.text), ("Assistant", response.content)])
+    await database.add_message(message.chat.id, assistant['id'], 'User', message.text)
+    await database.add_message(message.chat.id, assistant['id'], 'Assistant', response.content,
+                               price=price, model=assistant['model'])
     await state.update_data(thread=thread)
-    await message.answer(response.content + price_txt)
+    await message.answer(response.content)

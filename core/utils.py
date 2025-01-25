@@ -37,7 +37,7 @@ async def check_token(message: types.Message):
 async def start_assistant(assistant_id: int):
     assistant = await database.get_assistant(assistant_id)
     user = await database.get_users(assistant['user_id'])
-    if user['balance'] <= 0 and ('gpt' in assistant['model'].lower() or 'gigachat' in assistant['model'].lower()):
+    if user['balance'] <= 0 and paid_model(assistant['model']):
         await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})
         return 0
 
@@ -74,7 +74,7 @@ async def check_assistant_status(assistant: dict):
 
 async def init_personal_assistant(assistant: dict):
     user = await database.get_users(assistant['user_id'])
-    if user['balance'] <= 0 and ('gpt' in assistant['model'].lower() or 'gigachat' in assistant['model'].lower()):
+    if user['balance'] <= 0 and paid_model(assistant['model']):
         await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})
         return 0
 
@@ -87,3 +87,8 @@ async def init_personal_assistant(assistant: dict):
         assistant_id = await init_openai_assistant({'database': database, 'assistant': assistant, 'client': dp.client})
         dp.assistants_id[assistant['id']] = assistant_id
     await database.update_assistant(assistant['id'], {'status': 'working'})
+
+
+def paid_model(model: str) -> bool:
+    model = model.lower()
+    return 'gpt' in model or 'gigachat' in model or 'claude' in model

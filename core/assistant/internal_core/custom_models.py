@@ -5,7 +5,7 @@ from langchain_core.embeddings import Embeddings
 
 
 class JinaEmbeddings(Embeddings):
-    def __init__(self, token):
+    def __init__(self, token, embedding_model):
         self.url = 'https://api.jina.ai/v1/embeddings'
 
         self.headers = {
@@ -14,7 +14,7 @@ class JinaEmbeddings(Embeddings):
         }
 
         self.data = {
-            "model": "jina-embeddings-v3",
+            "model": embedding_model,
             "task": "text-matching",
             "late_chunking": False,
             "dimensions": 1024,
@@ -64,7 +64,48 @@ class GigaChatModel:
         return self.model.invoke(query)
 
 
-# embedding_function = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'], model="text-embedding-ada-002")
+class ChatEdenAI:
+    def __init__(self, api_key, provider, model, temperature=0.2, max_tokens=1000):
+        self.api_key = api_key
+        self.provider = provider
+        self.model = model
+        self.temperature = temperature
+        self.max_tokens = max_tokens
+
+    def invoke(self, prompt: str) -> str:
+        url = "https://api.edenai.run/v2/text/chat"
+
+        payload = {
+            "response_as_dict": True,
+            "attributes_as_list": False,
+            "show_base_64": True,
+            "show_original_response": True,
+            "temperature": self.temperature,
+            "max_tokens": self.max_tokens,
+            "tool_choice": "auto",
+            "providers": [f'{self.provider}/{self.model}'],
+            "text": prompt
+        }
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": f"Bearer {self.api_key}"
+        }
+
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code != 200:
+            raise Exception(f"Failed to invoke model: {response.text}")
+
+        data = response.json()
+        return ChatEdenAIResponse(data)
+
+
+class ChatEdenAIResponse:
+    def __init__(self, data: dict):
+        model = list(data.keys())[0]
+        metadata = {'model_name': model.split('/')[1], 'token_usage': data[model]['original_response']['usage']}
+        self.content = data[model].get('generated_text', '')
+        self.response_metadata = metadata
 
 # embedding_function = GigaChatEmbeddings(credentials=os.environ['GIGACHAT_API_KEY'], verify_ssl_certs=False)
 

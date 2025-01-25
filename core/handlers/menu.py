@@ -11,7 +11,7 @@ from core.assistant.internal_core.utils import price
 from core.config import dp, bot
 from core.filters import DeleteDocument, SelectAssistant
 from core.states import EditAssistantStates, KnowledgeBaseAssistantStates, BaseAssistantStates
-from core.utils import restart_working_assistant, start_assistant, init_personal_assistant
+from core.utils import restart_working_assistant, start_assistant, init_personal_assistant, paid_model
 
 
 async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext, T):
@@ -32,15 +32,17 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
 
     statuses = {'init': '🟡 ' + await T('Запускается...'), 'working': '🟢 ' + await T('Работает'),
                 'stopped': '🔴 ' + await T('Остановлен')}
-    text = await T(f'Ассистент <b>_1</b>\n\n'
-                   f'Ссылка на чат с ботом: @_2\n\n'
-                   f'Языковая модель: _3\n\n'
-                   f'_4', assistant["name"], assistant["username"], assistant["model"],
-                   statuses.get(assistant["status"], "?"))
+    if not assistant['is_personal']:
+        text = await T(f'Ассистент <b>_1</b>\n\n'
+                       f'Ссылка на чат с ботом: @_2\n\n'
+                       f'Языковая модель: _3\n\n'
+                       f'_4', assistant["name"], assistant["username"], assistant["model"],
+                       statuses.get(assistant["status"], "?"))
+    else:
+        text = await T(f'Личный ассистент <b>_1</b>\n\n'
+                       f'Языковая модель: _2\n\n_3', assistant["name"], assistant["model"],
+                       statuses.get(assistant["status"], "?"))
 
-    if assistant['is_personal']:
-        text = text.replace('Ассистент', 'Личный ассистент', 1)
-        text = text.replace(f'Ссылка на чат с ботом: @{assistant["username"]}\n\n', '')
     if assistant['status'] == 'init':
         asyncio.create_task(wait_assistant_init(assistant['id'], state, (data, callback_data, state)))
     await state.update_data(assistant_id=callback_data.id)
@@ -205,7 +207,7 @@ async def delete_documents_commit(call: types.CallbackQuery, state: FSMContext, 
 async def change_assistant_status(call: types.CallbackQuery, state: FSMContext, T):
     user = await database.get_users(call.message.chat.id)
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
-    if user['balance'] <= 0 and ('gpt' in assistant['model'].lower() or 'gigachat' in assistant['model'].lower()):
+    if user['balance'] <= 0 and paid_model(assistant['model'].lower()):
         await database.update_assistant(assistant['id'], {'pid': None, 'status': 'stopped'})
         return await call.answer(await T('На вашем балансе недостаточно средств для работы этого ассистента'))
 
@@ -236,7 +238,7 @@ async def assistant_model(call: types.CallbackQuery, T):
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text=await T('Opensource (Gemma, Llama)'),
                                             callback_data='opensource_models'))
-    keyboard.row(types.InlineKeyboardButton(text=await T('Коммерческие (OpenAI, GigaChat)'),
+    keyboard.row(types.InlineKeyboardButton(text=await T('Коммерческие (OpenAI, GigaChat, Claude)'),
                                             callback_data='commercial_models'))
     keyboard.row(types.InlineKeyboardButton(text='⬅️ ' + await T('Назад'), callback_data='edit_assistant'))
 
@@ -248,9 +250,8 @@ async def opensource_models(call: types.CallbackQuery, state: FSMContext, T):
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
 
     keyboard = InlineKeyboardBuilder()
-    for model in ['gemma2-9b-it', 'gemma-7b-it', 'llama-3.1-70b-versatile', 'llama-3.1-70b-specdec',
-                  'llama-3.1-8b-instant', 'llama-3.2-1b-preview', 'llama-3.2-3b-preview', 'llama3-70b-8192',
-                  'llama3-8b-8192', 'mixtral-8x7b-32768']:
+    for model in ['gemma2-9b-it', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant',
+                  'llama3-70b-8192', 'llama3-8b-8192', 'mixtral-8x7b-32768']:
         modes_txt = '✅ ' + model if model == assistant['model'] else model
         keyboard.add(types.InlineKeyboardButton(text=modes_txt, callback_data=f'assistant_model_{model}'))
     keyboard.adjust(2)
@@ -266,13 +267,15 @@ async def commercial_models(call: types.CallbackQuery, state: FSMContext, T):
 
     keyboard = InlineKeyboardBuilder()
     for model in ["gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
-                  "GigaChat", "GigaChat-Pro", "GigaChat-Max"]:
+                  "GigaChat", "GigaChat-Pro", "GigaChat-Max", "claude-3-5-haiku-latest", "claude-3-5-sonnet-latest",
+                  "claude-3-opus-latest"]:
         modes_txt = ('✅ ' + model if model == assistant['model'] else model) + ' - '
         pr = price[model]
-        if 'gpt' in model.lower():
+        if 'gpt' in model.lower() or 'claude' in model.lower():
             modes_txt += str(round((pr['input_cost'] / 10000 * 800 + pr['input_cost'] / 10000 * 200), 2)) + '₽'
-        else:
+        elif 'gigachat' in model.lower():
             modes_txt += str(round(pr['output_cost'] / 5000000 * 1000, 2)) + '₽'
+
         keyboard.add(types.InlineKeyboardButton(text=modes_txt, callback_data=f'assistant_model_{model}'))
     keyboard.adjust(2)
     keyboard.row(types.InlineKeyboardButton(text='⬅️ Назад', callback_data='assistant_model_type'))
@@ -294,7 +297,7 @@ async def assistant_models_commit(call: types.CallbackQuery, state: FSMContext, 
 
     await call.answer(await T('Выбрана модель') + ' ' + call.data[16:])
     await restart_working_assistant(assistant['id'])
-    if 'gpt' in call.data.lower() or 'gigachat' in call.data.lower():
+    if paid_model(call.data):
         await commercial_models(call, state, T)
     else:
         await opensource_models(call, state, T)
