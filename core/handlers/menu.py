@@ -1,6 +1,7 @@
 import asyncio
 import os
 import signal
+import textract
 
 from aiogram import types, F
 from aiogram.fsm.context import FSMContext
@@ -44,7 +45,7 @@ async def assistant_menu(data, callback_data: SelectAssistant, state: FSMContext
                        statuses.get(assistant["status"], "?"))
 
     if assistant['status'] == 'init':
-        asyncio.create_task(wait_assistant_init(assistant['id'], state, (data, callback_data, state)))
+        asyncio.create_task(wait_assistant_init(assistant['id'], state, (data, callback_data, state, T)))
     await state.update_data(assistant_id=callback_data.id)
     try:
         await bot.edit_message_text(text, chat_id=message.chat.id, reply_markup=keyboard.as_markup(),
@@ -125,7 +126,7 @@ async def knowledge_base(data, state: FSMContext, T):
 
     text = '📚 ' + await T('Загруженные документы') + '\n\n'
     for doc in (await database.get_documents(a_id)):
-        text += '├ <b>' + doc['file_name'] + '</b>\n'
+        text += '├ <b>' + doc['file_name'].split('.')[0] + '</b>\n'
     text = text[:text.rfind('├')] + '└' + text[text.rfind('├') + 1:] if '├' in text else text + await T('Пусто')
 
     keyboard = InlineKeyboardBuilder()
@@ -159,6 +160,7 @@ async def add_document(call: types.CallbackQuery, state: FSMContext, T):
 async def add_document_commit(message: types.Message, state: FSMContext, T):
     state_data = await state.get_data()
     assistant = await database.get_assistant(state_data['assistant_id'])
+    mes = await message.answer('📚 ' + await T('Обработка документа...'))
 
     path = f'core/assistant/internal_core/static/{state_data["assistant_id"]}/documents'
     if not os.path.exists(path):
@@ -166,8 +168,15 @@ async def add_document_commit(message: types.Message, state: FSMContext, T):
 
     file_info = await bot.get_file(message.document.file_id)
     await bot.download_file(file_info.file_path, path + '/' + message.document.file_name)
-    await database.add_document(assistant['id'], message.document.file_name)
 
+    new_name = message.document.file_name.replace('.', '_') + '.txt'
+    text = textract.process(path + '/' + message.document.file_name).decode('utf-8')
+    with open(path + '/' + new_name, 'w') as f:
+        f.write(text)
+    os.remove(path + '/' + message.document.file_name)
+
+    await mes.delete()
+    await database.add_document(assistant['id'], new_name)
     await restart_working_assistant(state_data['assistant_id'])
     await message.delete()
     await knowledge_base(message, state, T)

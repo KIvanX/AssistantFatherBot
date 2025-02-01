@@ -155,3 +155,4 @@ zipp==3.21.0
 
 yookassa~=3.4.3
 telegraph~=2.2.0
+textract~=1.6.5

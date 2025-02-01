@@ -34,7 +34,7 @@ async def func_check_mail_file(data, state: FSMContext, T):
     message: types.Message = data.message if isinstance(data, types.CallbackQuery) else data
 
     if isinstance(data, types.Message):
-        text = message.caption or ''
+        text = message.html_text
         keyboard = message.reply_markup.inline_keyboard if 'reply_markup' in message else []
         file_type = message.content_type.split('.')[-1].lower()
         if file_type != 'text':
@@ -42,7 +42,7 @@ async def func_check_mail_file(data, state: FSMContext, T):
             file_id = mes[file_type]['file_id'] if file_type != 'photo' else mes[file_type][-1]['file_id']
             await state.update_data(text=text, keyboard=keyboard, file_type=file_type, file_id=file_id)
         else:
-            await state.update_data(text=message.html_text, keyboard=keyboard, file_type=file_type, file_id=0)
+            await state.update_data(text=text, keyboard=keyboard, file_type=file_type, file_id=0)
         await message.delete()
     else:
         text = (await state.get_data())['text']
@@ -68,8 +68,7 @@ async def func_edit_text(message: types.Message, state: FSMContext, T):
 async def func_create_mail_keyboard(data, state: FSMContext, T):
     message: types.Message = data.message if isinstance(data, types.CallbackQuery) else data
     keyboard = (await state.get_data())['keyboard']
-    text = f'''
-Отлично! Ты можешь {"изменить" if keyboard else "добавить"} кнопки.
+    text = f'''Отлично! Ты можешь {"изменить" if keyboard else "добавить"} кнопки.
 Отправь мне список URL-кнопок в одном сообщении. Следуй этому формату:
 
 Кнопка 1 - https://example1.com

@@ -1,7 +1,9 @@
-# import nlpcloud
+
 import requests
 from langchain_community.chat_models import GigaChat
 from langchain_core.embeddings import Embeddings
+# from sentence_transformers import SentenceTransformer
+# import torch
 
 
 class JinaEmbeddings(Embeddings):
@@ -40,6 +42,18 @@ class JinaEmbeddings(Embeddings):
         else:
             print(response.status_code, response.text)
             return {}
+
+
+# class LocalEmbeddings(Embeddings):
+#     def __init__(self, embedding_model='sentence-transformers/all-MiniLM-L12-v2'):
+#         self.model = SentenceTransformer(embedding_model, device='cpu')
+#         torch.set_num_threads(1)
+#
+#     def embed_documents(self, texts: list[str]):
+#         return [e.astype(float).tolist() for e in self.model.encode(texts)]
+#
+#     def embed_query(self, text: str):
+#         return self.model.encode([text])[0].astype(float).tolist()
 
 
 class NlpCloudEmbeddings(Embeddings):
@@ -106,6 +120,18 @@ class ChatEdenAIResponse:
         metadata = {'model_name': model.split('/')[1], 'token_usage': data[model]['original_response']['usage']}
         self.content = data[model].get('generated_text', '')
         self.response_metadata = metadata
+
+
+class JinaEdenAIEmbeddings(Embeddings):
+    def __init__(self, embedding_model='sentence-transformers/all-MiniLM-L12-v2'):
+        pass
+
+    def embed_documents(self, texts: list[str]):
+        pass
+
+    def embed_query(self, text: str):
+        pass
+
 
 # embedding_function = GigaChatEmbeddings(credentials=os.environ['GIGACHAT_API_KEY'], verify_ssl_certs=False)
 

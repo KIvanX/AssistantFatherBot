@@ -30,20 +30,22 @@ async def init_assistant(external_data=None):
     else:
         chat_model = ChatGroq(temperature=0.6, model_name=assistant["model"], api_key=os.environ['GROQ_API_KEY'])
 
-    documents = []
+    documents, vector_db = [], None
     for doc in await database.get_documents(assistant['id']):
         path = f'core/assistant/internal_core/static/{assistant["id"]}/documents/' + doc['file_name']
         documents.extend(TextLoader(path).load())
 
-    if 'jina' in assistant['emb_model']:
-        embedding_model = JinaEmbeddings(os.environ['JINA_API_KEY'], assistant['emb_model'])
-    else:
-        embedding_model = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'], model=assistant['emb_model'])
+    if documents:
+        if 'jina' in assistant['emb_model']:
+            embedding_model = JinaEmbeddings(os.environ['JINA_API_KEY'], assistant['emb_model'])
+        else:
+            embedding_model = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'],
+                                               model=assistant['emb_model'])
 
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=400)
-    document_chunks = text_splitter.split_documents(documents)
-    vector_db = Chroma.from_documents(document_chunks, embedding_model,
-                                      client_settings=Settings(anonymized_telemetry=False)) if documents else None
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=400)
+        document_chunks = text_splitter.split_documents(documents)
+        vector_db = await Chroma.afrom_documents(document_chunks, embedding_model,
+                                                 client_settings=Settings(anonymized_telemetry=False))
     return chat_model, vector_db
 
 
@@ -54,6 +56,7 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
     chat_model = external_data['chat_model'] if external_data else in_dp.chat_model
     vector_db = external_data['vector_db'] if external_data else in_dp.vector_db
 
+    print(1 / 0)
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     thread = (await state.get_data()).get('thread', {})
     thread[str(message.chat.id)] = thread.get(str(message.chat.id), [])
@@ -64,7 +67,7 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
         prompt += f"{role}: {text}\n"
 
     if vector_db:
-        retrieved_docs = vector_db.similarity_search(message.text, k=5)
+        retrieved_docs = await vector_db.asimilarity_search(message.text, k=5)
         prompt += "\nDocuments: " + " ".join([doc.page_content for doc in retrieved_docs]) + "\n"
 
         prompt += ("\nSystem: Старайся дать ответ, в котором имеется полная информация об обсуждаемом объекте, "
