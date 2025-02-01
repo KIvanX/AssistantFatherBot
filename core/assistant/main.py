@@ -60,6 +60,7 @@ async def main():
         dp.message.register(get_openai_message, F.text[0] != '/')
         dp.assistant_id = await init_openai_assistant()
 
+    dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", '')
     logging.warning(f'Assistant {dp.assistant["id"]} is ready to work!')
     await database.update_assistant(dp.assistant['id'], {'status': 'working'})
     await dp.start_polling(dp.bot)
