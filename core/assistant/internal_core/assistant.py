@@ -89,8 +89,8 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
                                price=price, model=assistant['model'])
     await state.update_data(thread=thread)
     try:
-        # for fr, to in [('_*', '__'), ('*_', '__'), ('<think>', '__'), ('</think>', '__')]:
-        #     response.content = response.content.replace(fr, to)
+        for fr, to in [('<think>', '_'), ('</think>', '_')]:
+            response.content = response.content.replace(fr, to)
         await message.answer(response.content, parse_mode='Markdown')
     except:
         logging.warning('No parse: ' + response.content)
