@@ -1,4 +1,4 @@
-
+import logging
 import os
 from aiogram import types
 from aiogram.enums import ChatAction
@@ -93,4 +93,5 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
             response.content = response.content.replace(fr, to)
         await message.answer(response.content, parse_mode='Markdown')
     except:
+        logging.warning('No parse: ' + response.content)
         await message.answer(response.content, parse_mode=None)
