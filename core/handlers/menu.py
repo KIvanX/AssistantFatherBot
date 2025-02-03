@@ -259,7 +259,7 @@ async def opensource_models(call: types.CallbackQuery, state: FSMContext, T):
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
 
     keyboard = InlineKeyboardBuilder()
-    for model in ['gemma2-9b-it', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant',
+    for model in ['gemma2-9b-it', 'deepseek-r1-distill-llama-70b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant',
                   'llama3-70b-8192', 'llama3-8b-8192', 'mixtral-8x7b-32768']:
         modes_txt = '✅ ' + model if model == assistant['model'] else model
         keyboard.add(types.InlineKeyboardButton(text=modes_txt, callback_data=f'assistant_model_{model}'))

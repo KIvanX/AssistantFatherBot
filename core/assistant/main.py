@@ -10,6 +10,7 @@ from aiogram.filters import CommandStart, Command
 from aiogram.fsm.context import FSMContext
 from openai import AsyncOpenAI
 
+from core.assistant.internal_core.utils import init_logging
 from .internal_core.middleware import TranslaterMiddleware
 from .internal_core import database, admin, mailing
 from .internal_core.openai_assistant import init_openai_assistant, get_openai_message
@@ -42,6 +43,7 @@ async def my_chat_member(msg: types.ChatMemberUpdated):
 
 async def main():
     dotenv.load_dotenv()
+    init_logging()
 
     dp.db_pool = await database.get_db_pool()
     dp.assistant = await database.get_assistant(int(os.environ.get('ASSISTANT_ID')))

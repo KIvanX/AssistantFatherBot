@@ -73,7 +73,7 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
                    "поскольку позже в Documents может не быть нужной тебе информации. "
                    "Если же предоставишь полную информацию, то сможешь найти ее в истории беседы.\n")
 
-    prompt += f"\nHuman: {message.text}\n\nAssistant: "
+    prompt += f"\nHuman: {message.md_text}\n\nAssistant: "
     with open(f'core/assistant/internal_core/static/{assistant["id"]}/prompt.log', 'w') as f:
         f.write(prompt)
 
@@ -83,9 +83,12 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
     user = await database.get_users(assistant['user_id'])
     await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
     await check_balance(user, database)
-    thread[str(message.chat.id)].extend([("Human", message.text), ("Assistant", response.content)])
-    await database.add_message(message.chat.id, assistant['id'], 'User', message.text)
+    thread[str(message.chat.id)].extend([("Human", message.md_text), ("Assistant", response.content)])
+    await database.add_message(message.chat.id, assistant['id'], 'User', message.md_text)
     await database.add_message(message.chat.id, assistant['id'], 'Assistant', response.content,
                                price=price, model=assistant['model'])
     await state.update_data(thread=thread)
-    await message.answer(response.content)
+    try:
+        await message.answer(response.content.replace('_*', '<i>').replace('*_', '</i>'), parse_mode='HTML')
+    except:
+        await message.answer(response.content, parse_mode=None)

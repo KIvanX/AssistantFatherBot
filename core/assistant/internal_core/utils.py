@@ -1,3 +1,4 @@
+import logging
 import os
 import signal
 
@@ -73,3 +74,13 @@ async def check_balance(user: dict, database):
 def paid_model(model: str) -> bool:
     model = model.lower()
     return 'gpt' in model or 'gigachat' in model or 'claude' in model
+
+
+def init_logging():
+    if os.environ.get('DEBUG', '').lower() == 'false':
+        for handler in logging.root.handlers[:]:
+            logging.root.removeHandler(handler)
+
+        logging.basicConfig(level=logging.WARNING, filename=f"core/static/logs.log", filemode="a",
+                            format=f"ASSISTANT {os.environ.get('ASSISTANT_ID')} %(asctime)s %(levelname)s "
+                                   f"%(message)s\n" + '_' * 100)

@@ -1,5 +1,7 @@
 import logging
 import os
+
+import dotenv
 from aiogram import Dispatcher
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.redis import RedisStorage
@@ -15,14 +17,5 @@ help_info = {'ru': 'https://telegra.ph/Spravka-bota-Sozdatel-assistentov-01-24',
              'zh': 'https://telegra.ph/创建助手机器人-01-24'}
 
 
-DEBUG = os.environ.get('DEBUG', '').lower() != 'false'
 storage = RedisStorage.from_url('redis://localhost:6379/5')
 dp = Dispatcher(storage=storage)
-
-if not DEBUG:
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
-
-    logging.basicConfig(level=logging.WARNING, filename=f"core/static/logs.log", filemode="a",
-                        format=f"ASSISTANT {os.environ.get('ASSISTANT_ID')} %(asctime)s %(levelname)s "
-                               f"%(message)s\n" + '_' * 100)
