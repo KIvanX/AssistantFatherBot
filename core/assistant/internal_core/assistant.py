@@ -56,7 +56,6 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
     chat_model = external_data['chat_model'] if external_data else in_dp.chat_model
     vector_db = external_data['vector_db'] if external_data else in_dp.vector_db
 
-    print(1 / 0)
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     thread = (await state.get_data()).get('thread', {})
     thread[str(message.chat.id)] = thread.get(str(message.chat.id), [])
