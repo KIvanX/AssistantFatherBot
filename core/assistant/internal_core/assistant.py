@@ -89,6 +89,8 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
                                price=price, model=assistant['model'])
     await state.update_data(thread=thread)
     try:
-        await message.answer(response.content.replace('_*', '<i>').replace('*_', '</i>'), parse_mode='HTML')
+        for fr, to in [('_*', '<i>'), ('*_', '</i>'), ('<think>', '<i>'), ('</think>', '</i>')]:
+            response.content = response.content.replace(fr, to)
+        await message.answer(response.content, parse_mode='HTML')
     except:
         await message.answer(response.content, parse_mode=None)
