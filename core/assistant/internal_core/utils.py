@@ -83,11 +83,10 @@ def init_logging():
         logging.basicConfig(level=logging.WARNING,
                             filename=f"core/static/logs.log",
                             filemode="a",
-                            handlers=[logging.FileHandler("core/static/logs.log")],
                             format=f"ASSISTANT {os.environ.get('ASSISTANT_ID')} %(asctime)s %(levelname)s "
                                    f"%(message)s\n" + '_' * 100)
 
-    def log_unhandled_exception(exc_type, exc_value, exc_traceback):
-        logging.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
+        def log_unhandled_exception(exc_type, exc_value, exc_traceback):
+            logging.error("Необработанная ошибка:", exc_info=(exc_type, exc_value, exc_traceback))
 
-    sys.excepthook = log_unhandled_exception
+        sys.excepthook = log_unhandled_exception
