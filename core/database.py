@@ -43,7 +43,7 @@ async def get_assistant(assistant_id: int) -> list:
 
 
 async def add_assistant(user_id: int, is_personal: bool, token: str, name: str, start_text: str, model: str,
-                        instruction: str, username: str, emb_model='jina-embeddings-v3') -> int:
+                        instruction: str, username: str, emb_model='text-embedding-3-small') -> int:
     async with dp.db_pool.acquire() as connection:
         return (await connection.fetch('INSERT INTO assistants(user_id, is_personal, token, name, start_text, model, '
                                        'instruction, username, emb_model) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) '
