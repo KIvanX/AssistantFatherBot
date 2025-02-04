@@ -41,12 +41,18 @@ async def statistic(call: types.CallbackQuery, T):
                    f'Удалённых _1: _5 (_6%)\n\n'
                    f'Новых _1 за час: +_7 (+_8%)\n'
                    f'Новых _1 за день: +_9 (+_10%)\n'
-                   f'Новых _1 за месяц: +_11 (+_12%)\n\n',
+                   f'Новых _1 за месяц: +_11 (+_12%)\n\n'
+                   f'Новых _13 за час: +_14 (+_15%)\n'
+                   f'Новых _13 за день: +_16 (+_17%)\n'
+                   f'Новых _13 за месяц: +_18 (+_19%)\n\n',
                    '🙋', info["users"], info["alive_users"], round(info["alive_users"] / info["users"] * 100, 2),
-                   info["del_users"], round(info["del_users"] / info["users"] * 100, 2), info["new_per_hour"],
-                   round(info["new_per_hour"] / info["users"] * 100, 2), info["new_per_day"],
-                   round(info["new_per_day"] / info["users"] * 100, 2), info["new_per_month"],
-                   round(info["new_per_month"] / info["users"] * 100, 2))
+                   info["del_users"], round(info["del_users"] / info["users"] * 100, 2),
+                   info["new_per_hour"], round(info["new_per_hour"] / info["users"] * 100, 2),
+                   info["new_per_day"], round(info["new_per_day"] / info["users"] * 100, 2),
+                   info["new_per_month"], round(info["new_per_month"] / info["users"] * 100, 2), '📨',
+                   info["new_mes_hour"], round(info["new_mes_hour"] / info["messages"] * 100, 2),
+                   info["new_mes_day"], round(info["new_mes_day"] / info["messages"] * 100, 2),
+                   info["new_mes_month"], round(info["new_mes_month"] / info["messages"] * 100, 2))
 
     keyboard = InlineKeyboardBuilder()
     keyboard.add(types.InlineKeyboardButton(text='⬅️ ' + await T('Назад'), callback_data='admin'))

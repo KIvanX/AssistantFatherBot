@@ -39,33 +39,36 @@ async def init_openai_assistant(external_data=None):
 
 
 async def get_openai_message(message: types.Message, state: FSMContext, external_data=None):
-    bot = external_data['bot'] if external_data else in_dp.bot
+    state_data = await state.get_data()
+    bot = external_data['bot'] if external_data else message.bot
     database = external_data['database'] if external_data else in_database
     assistant = external_data['assistant'] if external_data else in_dp.assistant
     client = external_data['client'] if external_data else in_dp.client
+    assistant_id = external_data['assistant_id'] if external_data else in_dp.assistant_id
 
     status = ['wait']
     asyncio.create_task(typing(bot, message, status))
 
-    if 'thread_id' not in (await state.get_data()):
+    if 'thread_id' not in state_data:
         thread = await client.beta.threads.create()
+        state_data['thread_id'] = thread.id
         await state.update_data(thread_id=thread.id)
 
     await client.beta.threads.messages.create(
-        thread_id=(await state.get_data()).get('thread_id'),
+        thread_id=state_data.get('thread_id'),
         content=message.text,
         role="user"
     )
 
     run = await client.beta.threads.runs.create_and_poll(
-        thread_id=(await state.get_data()).get('thread_id'),
-        assistant_id=assistant['id'],
+        thread_id=state_data.get('thread_id'),
+        assistant_id=assistant_id,
     )
 
     status[0] = 'completed'
     if run.status == "completed":
         messages = await client.beta.threads.messages.list(
-            thread_id=(await state.get_data()).get('thread_id'),
+            thread_id=state_data.get('thread_id'),
             run_id=run.id
         )
 

@@ -34,11 +34,12 @@ price = {
     "GigaChat-Max:1.0.26.20": {"input_cost": 0, "output_cost": 7566}
 }
 
-emb_price = {'jina-clip-v2': 0,
-             'jina-embeddings-v3': 0,
-             'text-embedding-3-small': 0.01,
-             'text-embedding-3-large': 0.065,
-             'text-embedding-ada-002': 0.05}
+emb_price = {'jina/jina-embeddings-v2-base-en': 0.0018,
+             'mistral/1024__mistral-embed': 0.01,
+             'google/768__textembedding-gecko': 0.1,
+             'text-embedding-3-small': 0.001,
+             'text-embedding-3-large': 0.0065,
+             'text-embedding-ada-002': 0.005}
 
 
 async def calc_price(params: dict):

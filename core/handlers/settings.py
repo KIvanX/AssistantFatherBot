@@ -36,14 +36,21 @@ async def rag_settings(call: types.CallbackQuery, state: FSMContext, T):
             '<b>RAG система</b> - система поиска релевантной информации в документах из "📚 База знаний"\n\n'
             '<b>Embedding модель</b> - нейросеть, которая преобразует текст документов в векторное представление\n\n'
             f'RAG система: {"<b>Встроенная</b>" if assistant["own_search"] else "<b>OpenAI (10₽/Гб)</b>"}\n'
-            f'Embedding модель: _1.')
+            f'Embedding модель: _1.\n\n'
+            f'{"❕ Цена указана за миллион символов текста" if assistant["own_search"] else ""}')
 
     keyboard = InlineKeyboardBuilder()
     if assistant['own_search']:
         for i, (model, price) in enumerate(emb_price.items()):
-            txt_model = ('✅ ' + model if model == assistant['emb_model'] else model) + f' - {price * 100}₽'
+            short = {'jina/jina-embeddings-v2-base-en': 'Jina V2',
+                     'mistral/1024__mistral-embed': 'Mistral 1024',
+                     'google/768__textembedding-gecko': 'Google Gecko 768',
+                     'text-embedding-3-small': 'OpenAI 3-small',
+                     'text-embedding-3-large': 'OpenAI 3-large',
+                     'text-embedding-ada-002': 'OpenAI ada-002'}[model]
+            txt_model = ('✅ ' + short if model == assistant['emb_model'] else short) + f' - {round(price * 100, 1)}₽'
             keyboard.add(types.InlineKeyboardButton(text=txt_model, callback_data=f'change_emb_model_{i}'))
-        keyboard.adjust(2, 2, 1)
+        keyboard.adjust(2)
 
     if 'gpt' in assistant['model'].lower() and assistant['model'] != 'gpt-4':
         change_system = '🔄 ' + await T('Использовать RAG бота') \
@@ -85,7 +92,7 @@ async def edit_token(data, state: FSMContext, T):
     keyboard.row(types.InlineKeyboardButton(text='⬅️ ' + await T('Назад'), callback_data='assistant_settings'))
 
     await bot.edit_message_text(await T(f'Текущий токен: \n\n<code>_1</code>\n\n'
-                                f'Чтобы изменить токен, введите его в чат', assistant["token"]),
+                                        f'Чтобы изменить токен, введите его в чат', assistant["token"]),
                                 chat_id=message.chat.id, message_id=state_data.get('message_id', message.message_id),
                                 reply_markup=keyboard.as_markup())
 
@@ -107,7 +114,8 @@ async def edit_token_commit(message: types.Message, state: FSMContext, T):
     await restart_working_assistant(state_data['assistant_id'])
     await message.delete()
     await bot.edit_message_text(f'✅ ' + await T('Токен успешно изменен. \n\n'
-                                f'Обновленная ссылка на чат: @_1', info.username), chat_id=message.chat.id,
+                                                f'Обновленная ссылка на чат: @_1', info.username),
+                                chat_id=message.chat.id,
                                 message_id=state_data.get('message_id', message.message_id),
                                 reply_markup=keyboard.as_markup())
 
@@ -121,7 +129,7 @@ async def delete_assistant_confirm(call: types.CallbackQuery, state: FSMContext,
     keyboard.row(types.InlineKeyboardButton(text='⬅️ ' + await T('Назад'), callback_data='assistant_settings'))
 
     await call.message.edit_text(f'❗️ ' + await T('Вы уверены, что хотите удалить ассистента <b>_1</b>?\n\n'
-                                 f'Это действие нельзя будет отменить', assistant["name"]),
+                                                  f'Это действие нельзя будет отменить', assistant["name"]),
                                  reply_markup=keyboard.as_markup())
 
 

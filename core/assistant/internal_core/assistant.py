@@ -11,9 +11,9 @@ from langchain_groq import ChatGroq
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from . import database as in_database
-from .custom_models import JinaEmbeddings, ChatEdenAI
+from .custom_models import ChatEdenAI, EdenAIEmbeddings
 from .config import dp as in_dp
-from .utils import calc_price, check_balance
+from .utils import calc_price, check_balance, emb_price
 
 
 async def init_assistant(external_data=None):
@@ -36,8 +36,8 @@ async def init_assistant(external_data=None):
         documents.extend(TextLoader(path).load())
 
     if documents:
-        if 'jina' in assistant['emb_model']:
-            embedding_model = JinaEmbeddings(os.environ['JINA_API_KEY'], assistant['emb_model'])
+        if '/' in assistant['emb_model']:
+            embedding_model = EdenAIEmbeddings(os.environ["EDENAI_API_KEY"], assistant['emb_model'])
         else:
             embedding_model = OpenAIEmbeddings(openai_api_key=os.environ['OPENAI_API_KEY'],
                                                model=assistant['emb_model'])
@@ -46,6 +46,10 @@ async def init_assistant(external_data=None):
         document_chunks = text_splitter.split_documents(documents)
         vector_db = await Chroma.afrom_documents(document_chunks, embedding_model,
                                                  client_settings=Settings(anonymized_telemetry=False))
+        user = await database.get_users(assistant['user_id'])
+        price = sum([len(doc.page_content) for doc in documents]) * emb_price[assistant['emb_model']] / 10**6
+        await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
+        await check_balance(user, database)
     return chat_model, vector_db
 
 
@@ -79,7 +83,7 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     response = chat_model.invoke(prompt)
-    price = await calc_price(response.response_metadata)
+    price = await calc_price(response.response_metadata) + len(message.text) * emb_price[assistant['emb_model']] / 10**6
     user = await database.get_users(assistant['user_id'])
     await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
     await check_balance(user, database)

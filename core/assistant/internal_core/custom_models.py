@@ -1,3 +1,4 @@
+import logging
 
 import requests
 from langchain_community.chat_models import GigaChat
@@ -29,9 +30,9 @@ class JinaEmbeddings(Embeddings):
 
         if response.status_code == 200 and response.json().get('data'):
             return [e['embedding'] for e in response.json()['data']]
-        else:
-            print(response.status_code, response.text)
-            return []
+
+        logging.error(f"Failed jina embeddings docs ({response.status_code}): {response.text}")
+        return []
 
     def embed_query(self, text):
         self.data['input'] = [text]
@@ -39,9 +40,9 @@ class JinaEmbeddings(Embeddings):
 
         if response.status_code == 200 and response.json().get('data'):
             return response.json()['data'][0]['embedding']
-        else:
-            print(response.status_code, response.text)
-            return {}
+
+        logging.error(f"Failed jina embeddings {response.status_code}): {response.text}")
+        return []
 
 
 # class LocalEmbeddings(Embeddings):
@@ -54,20 +55,6 @@ class JinaEmbeddings(Embeddings):
 #
 #     def embed_query(self, text: str):
 #         return self.model.encode([text])[0].astype(float).tolist()
-
-
-class NlpCloudEmbeddings(Embeddings):
-    def __init__(self, token, model_name="paraphrase-multilingual-mpnet-base-v2"):
-        # self.client = nlpcloud.Client(model_name, token)
-        self.client = None
-
-    def embed_documents(self, texts):
-        print(texts)
-        print(self.client.embeddings(texts))
-        return []
-
-    def embed_query(self, text):
-        return self.client.embeddings([text])['embeddings'][0]
 
 
 class GigaChatModel:
@@ -122,15 +109,40 @@ class ChatEdenAIResponse:
         self.response_metadata = metadata
 
 
-class JinaEdenAIEmbeddings(Embeddings):
-    def __init__(self, embedding_model='sentence-transformers/all-MiniLM-L12-v2'):
-        pass
+class EdenAIEmbeddings(Embeddings):
+    def __init__(self, api_key, embedding_model='jina/jina-embeddings-v2-base-en'):
+        self.api_key = api_key
+        self.embedding_model = embedding_model
+        self.last_price = 0
 
     def embed_documents(self, texts: list[str]):
-        pass
+        url = "https://api.edenai.run/v2/text/embeddings"
+
+        payload = {
+            "response_as_dict": True,
+            "attributes_as_list": False,
+            "show_base_64": True,
+            "show_original_response": False,
+            "providers": [self.embedding_model],
+            "texts": texts,
+        }
+        headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": f"Bearer {self.api_key}"
+        }
+
+        response = requests.post(url, json=payload, headers=headers)
+        if response.status_code != 200:
+            raise Exception(f"Failed embeddings: {response.text}")
+
+        data = response.json()
+        self.last_price = data[self.embedding_model]['cost']
+        # print(f"Model: {self.embedding_model}, Cost: {self.last_price}$")
+        return [e['embedding'] for e in data[self.embedding_model]['items']]
 
     def embed_query(self, text: str):
-        pass
+        return self.embed_documents([text])[0]
 
 
 # embedding_function = GigaChatEmbeddings(credentials=os.environ['GIGACHAT_API_KEY'], verify_ssl_certs=False)

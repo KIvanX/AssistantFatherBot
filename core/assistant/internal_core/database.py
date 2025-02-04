@@ -100,6 +100,16 @@ async def get_statistics(assistant_id: int) -> dict:
         res = await connection.fetch(users_qsl + " AND now() - created_at < '1 month'::interval;", assistant_id)
         statistic['new_per_month'] = len(res)
 
+        mes_qsl = "SELECT * FROM messages WHERE assistant_id = $1"
+        res = await connection.fetch(users_qsl, assistant_id)
+        statistic['messages'] = len(res)
+        res = await connection.fetch(mes_qsl + " AND now() - created_at < '1 hour'::interval;", assistant_id)
+        statistic['new_mes_hour'] = len(res)
+        res = await connection.fetch(mes_qsl + " AND now() - created_at < '1 day'::interval;", assistant_id)
+        statistic['new_mes_day'] = len(res)
+        res = await connection.fetch(mes_qsl + " AND now() - created_at < '1 month'::interval;", assistant_id)
+        statistic['new_mes_month'] = len(res)
+
         res = await connection.fetch(users_qsl + " AND is_deleted = false;", assistant_id)
         statistic['alive_users'] = len(res)
         return statistic
