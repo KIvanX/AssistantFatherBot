@@ -22,13 +22,15 @@ async def init_assistant(external_data=None):
 
     if 'gigachat' in assistant["model"].lower():
         chat_model = GigaChat(credentials=os.environ['GIGACHAT_API_KEY'], model=assistant["model"],
-                              verify_ssl_certs=False)
+                              verify_ssl_certs=False, max_tokens=3000)
     elif 'gpt' in assistant["model"].lower():
-        chat_model = ChatOpenAI(api_key=os.environ['OPENAI_API_KEY'], model=assistant["model"])
+        chat_model = ChatOpenAI(api_key=os.environ['OPENAI_API_KEY'], model=assistant["model"], max_tokens=3000)
     elif 'claude' in assistant["model"].lower():
-        chat_model = ChatEdenAI(api_key=os.environ["EDENAI_API_KEY"], provider="anthropic", model=assistant["model"])
+        chat_model = ChatEdenAI(api_key=os.environ["EDENAI_API_KEY"], provider="anthropic", model=assistant["model"],
+                                max_tokens=3000)
     else:
-        chat_model = ChatGroq(temperature=0.6, model_name=assistant["model"], api_key=os.environ['GROQ_API_KEY'])
+        chat_model = ChatGroq(temperature=0.6, model_name=assistant["model"], api_key=os.environ['GROQ_API_KEY'],
+                              max_tokens=3000)
 
     documents, vector_db = [], None
     for doc in await database.get_documents(assistant['id']):
@@ -69,8 +71,10 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
     for role, text in thread[str(message.chat.id)][-5:]:
         prompt += f"{role}: {text}\n"
 
+    price = 0
     if vector_db:
         retrieved_docs = await vector_db.asimilarity_search(message.text, k=5)
+        price += len(message.text) * emb_price[assistant['emb_model']] / 10 ** 6
         prompt += "\nDocuments: " + " ".join([doc.page_content for doc in retrieved_docs]) + "\n"
 
         prompt += ("\nSystem: Старайся дать ответ, в котором имеется полная информация об обсуждаемом объекте, "
@@ -83,7 +87,7 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
 
     await bot.send_chat_action(message.chat.id, ChatAction.TYPING)
     response = chat_model.invoke(prompt)
-    price = await calc_price(response.response_metadata) + len(message.text) * emb_price[assistant['emb_model']] / 10**6
+    price += await calc_price(response.response_metadata)
     user = await database.get_users(assistant['user_id'])
     await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
     await check_balance(user, database)
