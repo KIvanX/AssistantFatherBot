@@ -54,6 +54,7 @@ async def main():
     dp.translations = await database.get_translations()
     dp.update.middleware(TranslaterMiddleware())
     dp.client = AsyncOpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+    logging.error(f'Assistant {dp.assistant["id"]} is ready to work!')
 
     if dp.assistant["own_search"] or 'gpt' not in dp.assistant["model"].lower():
         dp.message.register(get_message, F.text[0] != '/')
@@ -63,7 +64,7 @@ async def main():
         dp.assistant_id = await init_openai_assistant()
 
     dotenv.set_key('core/assistant/.env', "ASSISTANT_ID", '')
-    logging.warning(f'Assistant {dp.assistant["id"]} is ready to work!')
+
     await database.update_assistant(dp.assistant['id'], {'status': 'working'})
     await dp.start_polling(dp.bot)
 
