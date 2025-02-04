@@ -1,6 +1,7 @@
 import logging
 import os
 import signal
+import sys
 
 price = {
     "gpt-4o-2024-11-20": {"input_cost": 1.25, "output_cost": 5},
@@ -78,9 +79,15 @@ def paid_model(model: str) -> bool:
 
 def init_logging():
     if os.environ.get('DEBUG', '').lower() == 'false':
-        for handler in logging.root.handlers[:]:
-            logging.root.removeHandler(handler)
-
-        logging.basicConfig(level=logging.WARNING, filename=f"core/static/logs.log", filemode="a",
+        logging.root.handlers.clear()
+        logging.basicConfig(level=logging.WARNING,
+                            filename=f"core/static/logs.log",
+                            filemode="a",
+                            handlers=[logging.FileHandler("core/static/logs.log")],
                             format=f"ASSISTANT {os.environ.get('ASSISTANT_ID')} %(asctime)s %(levelname)s "
                                    f"%(message)s\n" + '_' * 100)
+
+    def log_unhandled_exception(exc_type, exc_value, exc_traceback):
+        logging.critical("Unhandled exception", exc_info=(exc_type, exc_value, exc_traceback))
+
+    sys.excepthook = log_unhandled_exception
