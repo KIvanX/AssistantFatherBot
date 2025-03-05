@@ -55,6 +55,8 @@ async def main():
 
     for user in await database.get_users():
         for assistant in await database.get_assistants(user['id']):
+            if assistant['status'] == 'init':
+                await database.update_assistant(assistant['id'], {'status': 'stopped'})
             if assistant['pid']:
                 status = await check_assistant_status(assistant)
                 if not status:

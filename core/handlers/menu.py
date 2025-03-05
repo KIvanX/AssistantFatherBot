@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core import database
 from core.assistant.internal_core.utils import price
-from core.config import dp, bot
+from core.config import dp, bot, free_models, commercial_models
 from core.filters import DeleteDocument, SelectAssistant
 from core.states import EditAssistantStates, KnowledgeBaseAssistantStates, BaseAssistantStates
 from core.utils import restart_working_assistant, start_assistant, init_personal_assistant, paid_model
@@ -259,8 +259,7 @@ async def opensource_models(call: types.CallbackQuery, state: FSMContext, T):
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
 
     keyboard = InlineKeyboardBuilder()
-    for model in ['gemma2-9b-it', 'deepseek-r1-distill-llama-70b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant',
-                  'llama3-70b-8192', 'llama3-8b-8192', 'mixtral-8x7b-32768']:
+    for model in free_models:
         modes_txt = '✅ ' + model if model == assistant['model'] else model
         keyboard.add(types.InlineKeyboardButton(text=modes_txt, callback_data=f'assistant_model_{model}'))
     keyboard.adjust(2)
@@ -271,13 +270,11 @@ async def opensource_models(call: types.CallbackQuery, state: FSMContext, T):
 
 
 @dp.callback_query(F.data == 'commercial_models')
-async def commercial_models(call: types.CallbackQuery, state: FSMContext, T):
+async def commercial_models_choose(call: types.CallbackQuery, state: FSMContext, T):
     assistant = await database.get_assistant((await state.get_data())['assistant_id'])
 
     keyboard = InlineKeyboardBuilder()
-    for model in ["gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
-                  "GigaChat", "GigaChat-Pro", "GigaChat-Max", "claude-3-5-haiku-latest", "claude-3-5-sonnet-latest",
-                  "claude-3-opus-latest"]:
+    for model in commercial_models:
         modes_txt = ('✅ ' + model if model == assistant['model'] else model) + ' - '
         pr = price[model]
         if 'gpt' in model.lower() or 'claude' in model.lower():
