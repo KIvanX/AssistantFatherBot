@@ -47,7 +47,7 @@ async def calc_price(params: dict):
 
     if model not in price:
         if paid_model(model):
-            print(f"Model {model} not found in price list")
+            logging.error(f"Model {model} not found in price list")
         return 0
 
     if 'gpt' in model or 'claude' in model:

@@ -14,7 +14,6 @@ async def init_openai_assistant(external_data=None):
     client = external_data['client'] if external_data else in_dp.client
 
     if not assistant['vector_store_id']:
-        print('load')
         vector_store = await client.beta.vector_stores.create(name="Documents")
         for doc in await database.get_documents(assistant['id']):
             with open(f'core/assistant/internal_core/static/{assistant["id"]}/documents/' + doc['file_name'], 'rb') as f:
