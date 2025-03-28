@@ -54,6 +54,7 @@ async def main():
     dp.translations = await database.get_translations()
     dp.update.middleware(TranslaterMiddleware())
     dp.client = AsyncOpenAI(api_key=os.environ.get('OPENAI_API_KEY'))
+    await dp.bot.set_my_commands([types.BotCommand(command="start", description="Старт")])
 
     if dp.assistant["own_search"] or 'gpt' not in dp.assistant["model"].lower():
         dp.message.register(get_message, F.text[0] != '/')
