@@ -20,8 +20,9 @@ async def admin_menu(data, state: FSMContext, T):
     keyboard = InlineKeyboardBuilder()
     keyboard.row(types.InlineKeyboardButton(text='📈 ' + await T('Статистика'), callback_data='statistic'))
     keyboard.row(types.InlineKeyboardButton(text='💬 ' + await T('Диалоги'), callback_data='dialogs'))
-    keyboard.row(types.InlineKeyboardButton(text='📣 ' + await T('Рассылка'), callback_data='mailing'))
-    keyboard.row(types.InlineKeyboardButton(text='🧑‍💻 ' + await T('Администраторы'), callback_data='update_admins'))
+    if message.chat.id == dp.assistant['user_id']:
+        keyboard.row(types.InlineKeyboardButton(text='📣 ' + await T('Рассылка'), callback_data='mailing'))
+        keyboard.row(types.InlineKeyboardButton(text='🧑‍💻 ' + await T('Администраторы'), callback_data='update_admins'))
 
     text = '💼 ' + await T('Меню администратора ассистента') + f' <b>{dp.assistant["name"]}</b>'
     if isinstance(data, types.CallbackQuery):
