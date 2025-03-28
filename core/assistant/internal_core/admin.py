@@ -64,6 +64,8 @@ async def statistic(call: types.CallbackQuery, T):
 @dp.callback_query(F.data == 'dialogs')
 async def users_dialog(call: types.CallbackQuery, state: FSMContext, T):
     users = await database.get_assistant_users(dp.assistant['id'])
+    if call.message.chat.id != dp.assistant['user_id']:
+        users = [u for u in users if u['user_id'] != dp.assistant['user_id']]
 
     page = (await state.get_data()).get('page', 0)
     if call.data in ['dialogs_page_left', 'dialogs_page_right']:
