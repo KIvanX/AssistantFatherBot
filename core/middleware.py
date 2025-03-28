@@ -52,5 +52,6 @@ async def load_translate(ru_text):
         tr_json = {}
     with open('core/static/translations.json', 'w') as f:
         f.write(ru_text + '\n\n' + tr)
+    tr_json['ru'] = ru_text
     await database.add_translation(tr_json)
     return tr_json

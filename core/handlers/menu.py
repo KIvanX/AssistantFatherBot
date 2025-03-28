@@ -177,6 +177,7 @@ async def add_document_commit(message: types.Message, state: FSMContext, T):
 
     await mes.delete()
     await database.add_document(assistant['id'], new_name)
+    await database.update_assistant(assistant['id'], {'vector_store_id': ''})
     await restart_working_assistant(state_data['assistant_id'])
     await message.delete()
     await knowledge_base(message, state, T)
@@ -207,6 +208,7 @@ async def delete_documents_commit(call: types.CallbackQuery, state: FSMContext, 
                       doc['file_name']):
         os.remove('core/assistant/internal_core/static/' + str(doc['assistant_id']) + '/documents/' + doc['file_name'])
 
+    await database.update_assistant(doc['assistant_id'], {'vector_store_id': ''})
     await restart_working_assistant(doc['assistant_id'])
     await call.answer('✅ ' + await T('Документ удален'))
     await delete_documents(call, state, T)
@@ -304,7 +306,7 @@ async def assistant_models_commit(call: types.CallbackQuery, state: FSMContext, 
     await call.answer(await T('Выбрана модель') + ' ' + call.data[16:])
     await restart_working_assistant(assistant['id'])
     if paid_model(call.data):
-        await commercial_models(call, state, T)
+        await commercial_models_choose(call, state, T)
     else:
         await opensource_models(call, state, T)
 

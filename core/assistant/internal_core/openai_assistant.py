@@ -13,17 +13,22 @@ async def init_openai_assistant(external_data=None):
     assistant = external_data['assistant'] if external_data else in_dp.assistant
     client = external_data['client'] if external_data else in_dp.client
 
-    vector_store = await client.beta.vector_stores.create(name="Documents")
-    for doc in await database.get_documents(assistant['id']):
-        with open(f'core/assistant/internal_core/static/{assistant["id"]}/documents/' + doc['file_name'], 'rb') as f:
-            await client.beta.vector_stores.file_batches.upload_and_poll(
-                vector_store_id=vector_store.id,
-                files=[(doc['file_name'], f)])
-
-    vs = await client.beta.vector_stores.retrieve(vector_store_id=vector_store.id)
-    price = int(vs.usage_bytes) / 1024**3 * 0.1 * 100
-    user = await database.get_users(assistant['user_id'])
-    await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
+    if not assistant['vector_store_id']:
+        print('load')
+        vector_store = await client.beta.vector_stores.create(name="Documents")
+        for doc in await database.get_documents(assistant['id']):
+            with open(f'core/assistant/internal_core/static/{assistant["id"]}/documents/' + doc['file_name'], 'rb') as f:
+                await client.beta.vector_stores.file_batches.upload_and_poll(
+                    vector_store_id=vector_store.id,
+                    files=[(doc['file_name'], f)])
+        vs = await client.beta.vector_stores.retrieve(vector_store_id=vector_store.id)
+        price = int(vs.usage_bytes) / 1024 ** 3 * 0.1 * 100
+        user = await database.get_users(assistant['user_id'])
+        await database.update_user(assistant['user_id'], {'balance': user['balance'] - price})
+        vector_store_id = vector_store.id
+        await database.update_assistant(assistant['id'], {'vector_store_id': vector_store_id})
+    else:
+        vector_store_id = assistant['vector_store_id']
 
     assistant = await client.beta.assistants.create(
         name="Assistant",
@@ -31,7 +36,7 @@ async def init_openai_assistant(external_data=None):
         model=assistant['model'],
         tools=[{"type": "file_search"}],
         tool_resources={
-            "file_search": {"vector_store_ids": [vector_store.id]}
+            "file_search": {"vector_store_ids": [vector_store_id]}
         },
     )
 
