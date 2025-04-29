@@ -4,6 +4,15 @@ import signal
 import sys
 
 price = {
+    "gpt-4.1": {"input_cost": 1, "output_cost": 4},
+    "gpt-4.1-2025-04-14": {"input_cost": 1, "output_cost": 4},
+
+    "gpt-4.1-mini": {"input_cost": 0.2, "output_cost": 0.8},
+    "gpt-4.1-mini-2025-04-14": {"input_cost": 0.2, "output_cost": 0.8},
+
+    "gpt-4.1-nano": {"input_cost": 0.05, "output_cost": 0.2},
+    "gpt-4.1-nano-2025-04-14": {"input_cost": 0.05, "output_cost": 0.2},
+
     "gpt-4o-2024-11-20": {"input_cost": 1.25, "output_cost": 5},
     "gpt-4o-2024-08-06": {"input_cost": 1.25, "output_cost": 5},
     "gpt-4o": {"input_cost": 1.25, "output_cost": 5},

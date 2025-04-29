@@ -8,7 +8,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.fsm.storage.redis import RedisStorage
 
-commercial_models = ["gpt-4o", "gpt-4o-2024-11-20", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
+commercial_models = ["gpt-4.1", "gpt-4.1-mini", "gpt-4.1-nano", "gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-3.5-turbo",
                      "GigaChat", "GigaChat-Pro", "GigaChat-Max", "claude-3-5-haiku-latest", "claude-3-5-sonnet-latest",
                      "claude-3-opus-latest"]
 free_models = ['qwen-2.5-32b', 'deepseek-r1-distill-qwen-32b', 'gemma2-9b-it', 'deepseek-r1-distill-llama-70b', 'llama-3.3-70b-versatile',
