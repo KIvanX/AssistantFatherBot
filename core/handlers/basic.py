@@ -9,7 +9,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 from core import database
 from core.assistant.internal_core.config import help_info
-from core.config import dp, bot
+from core.config import dp, bot, BASIC_LLM
 from core.filters import SelectAssistant
 from core.handlers.menu import assistant_menu
 from core.middleware import translater
@@ -157,7 +157,7 @@ async def auto_create_assistant(call: types.CallbackQuery, state: FSMContext, T)
     user = await database.get_users(call.message.chat.id)
     system = auto_create_assistant_text.replace('_LANGUAGE_', user['language'])
     mes = (await dp.client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=BASIC_LLM,
         messages=[{"role": "system", "content": system}]
     )).choices[0].message.content
     await state.update_data(chat=[{"role": "system", "content": system},
@@ -174,7 +174,7 @@ async def auto_create_assistant_step(message: types.Message, state: FSMContext, 
 
     chat = (await state.get_data()).get('chat', [])
     mes = (await dp.client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=BASIC_LLM,
         messages=chat + [{"role": "user", "content": message.text}]
     )).choices[0].message.content
     await state.update_data(chat=chat + [{"role": "user", "content": message.text},
@@ -216,7 +216,7 @@ async def personal_assistant(call: types.CallbackQuery, state: FSMContext, T):
     la = await T('Личный ассистент')
     name = f'{la} {[i for i in range(1, 1000) if f"{la} {i}" not in assistant_names][0]}'
     a_id = await database.add_assistant(call.message.chat.id, True, '', name,
-                                        await T('Привет! Чем могу помочь?'), 'gpt-4o-mini', '', '')
+                                        await T('Привет! Чем могу помочь?'), BASIC_LLM, '', '')
     if not os.path.exists(f"core/assistant/internal_core/static/{a_id}"):
         os.makedirs(f"core/assistant/internal_core/static/{a_id}")
 
@@ -231,7 +231,7 @@ async def create_assistant_commit(message: types.Message, state: FSMContext, T):
         return 0
 
     a_id = await database.add_assistant(message.chat.id, False, message.text, info.first_name,
-                                        await T('Привет! Чем могу помочь?'), 'gpt-4o-mini', '', info.username)
+                                        await T('Привет! Чем могу помочь?'), BASIC_LLM, '', info.username)
     if not os.path.exists(f"core/assistant/internal_core/static/{a_id}"):
         os.makedirs(f"core/assistant/internal_core/static/{a_id}")
 

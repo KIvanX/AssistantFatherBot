@@ -22,6 +22,7 @@ loop = asyncio.get_event_loop()
 dp = Dispatcher(storage=storage, loop=loop)
 yookassa.Configuration.account_id = os.environ['UKASSA_SHOP_ID']
 yookassa.Configuration.secret_key = os.environ['UKASSA_SECRET_KEY']
+BASIC_LLM = 'gpt-4.1-mini'
 
 if os.environ.get('DEBUG', '').lower() == 'false':
     for handler in logging.root.handlers[:]:

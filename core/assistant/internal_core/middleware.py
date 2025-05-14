@@ -5,6 +5,7 @@ from aiogram import BaseMiddleware
 from aiogram.types import TelegramObject
 from . import database
 from .config import dp
+from ...config import BASIC_LLM
 
 
 class TranslaterMiddleware(BaseMiddleware):
@@ -35,7 +36,7 @@ async def translater(ru_text, language, *args):
 
 async def load_translate(ru_text):
     tr = (await dp.client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=BASIC_LLM,
         messages=[{"role": "system", "content": 'Переведи текст на все нужные языки и верни ответ в виде json, '
                                                 'например: {"ru": "привет", "en": "hello", "fr": "bonjour", '
                                                 '"de": "hallo", "ja": "こんにちは", "it": "ciao", '
