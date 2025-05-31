@@ -7,7 +7,7 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.storage.redis import RedisStorage
 
 
-help_info = {'ru': 'https://telegra.ph/Spravka-bota-Sozdatel-assistentov-01-24',
+help_info = {'ru': 'https://telegra.ph/new-05-31-12',
              'en': 'https://telegra.ph/Bot-Help-Assistant-Creator-01-24',
              'fr': 'https://telegra.ph/Créateur-dAssistants-01-24-2',
              'de': 'https://telegra.ph/Einführung-01-24',
