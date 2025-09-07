@@ -4,10 +4,10 @@ from core.config import dp
 
 
 async def get_db_pool():
-    db_pool = await asyncpg.create_pool(host=os.environ['DB_HOST'],
-                                        database=os.environ['DB_NAME'],
-                                        user=os.environ['DB_USER'],
-                                        password=os.environ['DB_PASSWORD'])
+    db_pool = await asyncpg.create_pool(host=os.environ['POSTGRES_HOST'],
+                                        database=os.environ['POSTGRES_DB'],
+                                        user=os.environ['POSTGRES_USER'],
+                                        password=os.environ['POSTGRES_PASSWORD'])
     return db_pool
 
 

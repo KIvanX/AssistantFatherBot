@@ -1,0 +1,23 @@
+volumes:
+  db_volume:
+
+services:
+  db:
+    image: postgres:13.10
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - db_volume:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7.2
+    ports:
+      - "6378:6379"
+
+  api:
+    build: .
+    depends_on:
+      - db
+      - redis

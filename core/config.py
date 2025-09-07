@@ -17,7 +17,7 @@ free_models = ['qwen-2.5-32b', 'deepseek-r1-distill-qwen-32b', 'gemma2-9b-it', '
 dotenv.load_dotenv()
 
 bot = Bot(os.environ.get('TOKEN'), default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-storage = RedisStorage.from_url('redis://localhost:6379/5')
+storage = RedisStorage.from_url('redis://localhost:6379')
 loop = asyncio.get_event_loop()
 dp = Dispatcher(storage=storage, loop=loop)
 yookassa.Configuration.account_id = os.environ['UKASSA_SHOP_ID']

@@ -1,0 +1,45 @@
+▎Git и временные файлы
+
+.git
+.gitignore
+pycache/
+*.py[cod]
+*.pyo
+*.pyd
+*.cache
+
+▎Виртуальные окружения
+
+venv/
+.venv/
+env/
+ENV/
+
+▎Сборки и артефакты
+
+build/
+dist/
+*.egg-info/
+*.egg
+
+▎Кэш тестов и IDE
+
+.pytest_cache/
+.vscode/
+.idea/
+.DS_Store
+
+▎Логи и БД (если не нужны в образе)
+
+*.log
+*.sqlite3
+*.db
+
+▎Node зависимости (если есть фронтенд)
+
+node_modules/
+
+▎Прочее
+
+*.tmp
+*.swp
