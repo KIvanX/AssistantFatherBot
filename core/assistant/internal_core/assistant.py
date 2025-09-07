@@ -82,6 +82,7 @@ async def get_message(message: types.Message, state: FSMContext, external_data=N
                    "Если же предоставишь полную информацию, то сможешь найти ее в истории беседы.\n")
 
     prompt += f"\nHuman: {message.md_text}\n\nAssistant: "
+    os.makedirs(f'core/assistant/internal_core/static/{assistant["id"]}', exist_ok=True)
     with open(f'core/assistant/internal_core/static/{assistant["id"]}/prompt.log', 'w') as f:
         f.write(prompt)
 

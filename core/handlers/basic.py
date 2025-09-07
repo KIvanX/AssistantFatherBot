@@ -199,8 +199,7 @@ async def auto_create_assistant_step(message: types.Message, state: FSMContext, 
             a_id = await database.add_assistant(message.chat.id, True, '', info['name'],
                                                 info['start_text'], info['model'], info['instruction'], '')
 
-        if not os.path.exists(f"core/assistant/internal_core/static/{a_id}"):
-            os.makedirs(f"core/assistant/internal_core/static/{a_id}")
+        os.makedirs(f"core/assistant/internal_core/static/{a_id}", exist_ok=True)
 
         await state.set_state()
         await message.delete()
@@ -217,9 +216,8 @@ async def personal_assistant(call: types.CallbackQuery, state: FSMContext, T):
     name = f'{la} {[i for i in range(1, 1000) if f"{la} {i}" not in assistant_names][0]}'
     a_id = await database.add_assistant(call.message.chat.id, True, '', name,
                                         await T('Привет! Чем могу помочь?'), BASIC_LLM, '', '')
-    if not os.path.exists(f"core/assistant/internal_core/static/{a_id}"):
-        os.makedirs(f"core/assistant/internal_core/static/{a_id}")
 
+    os.makedirs(f"core/assistant/internal_core/static/{a_id}", exist_ok=True)
     await state.set_state()
     await assistant_menu(call, SelectAssistant(id=a_id), state, T)
 
@@ -232,9 +230,8 @@ async def create_assistant_commit(message: types.Message, state: FSMContext, T):
 
     a_id = await database.add_assistant(message.chat.id, False, message.text, info.first_name,
                                         await T('Привет! Чем могу помочь?'), BASIC_LLM, '', info.username)
-    if not os.path.exists(f"core/assistant/internal_core/static/{a_id}"):
-        os.makedirs(f"core/assistant/internal_core/static/{a_id}")
 
+    os.makedirs(f"core/assistant/internal_core/static/{a_id}", exist_ok=True)
     await state.set_state()
     await message.delete()
     await assistant_menu(message, SelectAssistant(id=a_id), state, T)
